@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+{% block title %}Pitch Precision | 2026 World Cup Predictions{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Entrance keyframes ─────────────────────────────────────────── */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideRight {
+    from { opacity: 0; transform: translateX(-14px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  /* Pulsing glow ring for the LIVE badge */
+  @keyframes liveRing {
+    0%, 100% { box-shadow: 0 0 0 0   rgba(46, 204, 113, 0.55); }
+    60%       { box-shadow: 0 0 0 7px rgba(46, 204, 113, 0); }
+  }
+  /* Spinning dot inside the LIVE badge */
+  @keyframes liveDot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+  /* Subtle float for the "arrow_forward" icon */
+  @keyframes nudgeRight {
+    0%, 100% { transform: translateX(0); }
+    50%       { transform: translateX(3px); }
+  }
+  /* Expand chevron when <details> opens */
+  details[open] summary .chevron { transform: rotate(180deg); }
+
+  /* ── Utility classes ────────────────────────────────────────────── */
+  .anim-slide-up    { animation: slideUp   .45s ease-out both; }
+  .anim-slide-right { animation: slideRight .4s ease-out both; }
+  .anim-scale-in    { animation: scaleIn   .38s ease-out both; }
+  .live-badge       { animation: liveRing  2s ease-in-out infinite; }
+  .live-dot         { animation: liveDot   1.4s ease-in-out infinite; }
+  .hover-nudge:hover .nudge-icon { animation: nudgeRight .5s ease-in-out; }
+
+  /* Card hover: subtle lift + shadow */
+  .card-lift {
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px -4px rgba(0, 109, 55, 0.12);
+  }
+
+  /* Fixture grid cross-fade when filter changes */
+  #fixtures-grid { transition: opacity .2s ease; }
+  #fixtures-grid.fading { opacity: 0; }
+
+  /* Chevron rotation */
+  .chevron { transition: transform .3s ease; }
+
+  /* Filter button press */
+  .filter-btn, .group-btn { transition: background-color .15s ease, color .15s ease, transform .1s ease; }
+  .filter-btn:active, .group-btn:active { transform: scale(0.93); }
+
+  /* Standings row slide on hover */
+  .standings-row { transition: background-color .15s ease, transform .15s ease; }
+  .standings-row:hover { transform: translateX(3px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="mb-lg">
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-md">
+    <div>
+      <!-- Badge row — slides in first -->
+      <div class="flex items-center gap-sm mb-xs anim-slide-up" style="animation-delay:.05s">
+        <span class="live-badge bg-primary-container text-on-primary-container px-sm py-1 rounded-full font-label-caps text-label-caps flex items-center gap-xs">
+          <span class="live-dot w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+          LIVE 2026
+        </span>
+        <span class="text-secondary font-label-caps text-label-caps uppercase tracking-widest">ML-Powered Forecasts</span>
+      </div>
+      <!-- Heading — slides in second -->
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs anim-slide-up" style="animation-delay:.15s">
+        FIFA World Cup 2026
+      </h1>
+      <!-- Body copy — slides in third -->
+      <p class="text-on-surface-variant font-body-sm text-body-sm max-w-xl anim-slide-up" style="animation-delay:.25s">
+        Tournament predictions powered by XGBoost models trained on 31,000+ competitive international matches.
+        Select any fixture below to generate a live match prediction.
+      </p>
+    </div>
+
+    <!-- Stat cards — scale in with stagger -->
+    <div class="flex gap-sm shrink-0">
+      <div class="tonal-layer-1 rounded-xl border border-surface-variant px-md py-sm text-center card-lift anim-scale-in" style="animation-delay:.3s">
+        <div class="font-data-display text-data-display text-primary">48</div>
+        <div class="font-label-caps text-label-caps text-secondary">Teams</div>
+      </div>
+      <div class="tonal-layer-1 rounded-xl border border-surface-variant px-md py-sm text-center card-lift anim-scale-in" style="animation-delay:.38s">
+        <div class="font-data-display text-data-display text-tertiary">10K</div>
+        <div class="font-label-caps text-label-caps text-secondary">Simulations</div>
+      </div>
+      <div class="tonal-layer-1 rounded-xl border border-surface-variant px-md py-sm text-center card-lift anim-scale-in" style="animation-delay:.46s">
+        <div class="font-data-display text-data-display text-on-surface">61.7%</div>
+        <div class="font-label-caps text-label-caps text-secondary">Model Accuracy</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Top Contenders -->
+<section class="mb-lg anim-slide-up" style="animation-delay:.35s">
+  <div class="flex items-center justify-between mb-md">
+    <h2 class="font-headline-md text-headline-md text-on-surface">Tournament Favorites</h2>
+    <a href="/team" class="font-label-caps text-label-caps text-primary hover:underline flex items-center gap-xs hover-nudge">
+      All Teams <span class="material-symbols-outlined text-[16px] nudge-icon">arrow_forward</span>
+    </a>
+  </div>
+  <div id="contenders-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-gutter">
+    <!-- Skeleton placeholders -->
+    <div class="skeleton rounded-xl h-40"></div>
+    <div class="skeleton rounded-xl h-40"></div>
+    <div class="skeleton rounded-xl h-40"></div>
+    <div class="skeleton rounded-xl h-40"></div>
+    <div class="skeleton rounded-xl h-40"></div>
+    <div class="skeleton rounded-xl h-40"></div>
+  </div>
+</section>
+
+<!-- Group Standings -->
+<section class="mb-lg anim-slide-up" style="animation-delay:.42s">
+  <div class="flex items-center justify-between mb-md">
+    <h2 class="font-headline-md text-headline-md text-on-surface">Group Standings</h2>
+    <span id="gs-source-badge" class="hidden font-label-caps text-label-caps text-secondary flex items-center gap-xs">
+      <span class="live-dot w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+      Live
+    </span>
+  </div>
+
+  <!-- Group tabs A–L -->
+  <div class="flex flex-wrap gap-xs mb-md" id="gs-tabs"></div>
+
+  <!-- Standings card -->
+  <div class="tonal-layer-1 rounded-xl border border-surface-variant overflow-hidden" id="gs-card">
+    <!-- skeleton while loading -->
+    <div class="skeleton h-52 m-md rounded-xl"></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="flex flex-wrap gap-md mt-sm px-xs" id="gs-legend" style="display:none!important">
+    <span class="flex items-center gap-xs font-label-caps text-[10px] text-secondary">
+      <span class="w-1 h-3.5 bg-primary rounded-full inline-block"></span> Advance to R32
+    </span>
+    <span class="flex items-center gap-xs font-label-caps text-[10px] text-secondary">
+      <span class="w-1 h-3.5 bg-tertiary rounded-full inline-block"></span> Best 8 (potential)
+    </span>
+    <span class="flex items-center gap-xs font-label-caps text-[10px] text-secondary">
+      <span class="w-1 h-3.5 bg-outline-variant rounded-full inline-block"></span> Eliminated / TBD
+    </span>
+  </div>
+</section>
+
+<!-- Fixture Browser -->
+<section class="anim-slide-up" style="animation-delay:.45s">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-md mb-md">
+    <h2 class="font-headline-md text-headline-md text-on-surface">Fixture Browser</h2>
+    <!-- Filter tabs -->
+    <div class="flex flex-wrap gap-xs" id="filter-tabs">
+      <button onclick="filterFixtures('all')"      data-filter="all"      class="filter-btn px-sm py-xs rounded-lg font-label-caps text-label-caps bg-primary text-on-primary">All</button>
+      <button onclick="filterFixtures('upcoming')" data-filter="upcoming" class="filter-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Upcoming</button>
+      <button onclick="filterFixtures('live')"     data-filter="live"     class="filter-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Live</button>
+      <div class="w-px bg-outline-variant mx-xs"></div>
+      <button onclick="filterByGroup('A')" data-group="A" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp A</button>
+      <button onclick="filterByGroup('B')" data-group="B" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp B</button>
+      <button onclick="filterByGroup('C')" data-group="C" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp C</button>
+      <button onclick="filterByGroup('D')" data-group="D" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp D</button>
+      <button onclick="filterByGroup('E')" data-group="E" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp E</button>
+      <button onclick="filterByGroup('F')" data-group="F" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp F</button>
+      <button onclick="filterByGroup('G')" data-group="G" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp G</button>
+      <button onclick="filterByGroup('H')" data-group="H" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp H</button>
+      <button onclick="filterByGroup('I')" data-group="I" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp I</button>
+      <button onclick="filterByGroup('J')" data-group="J" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp J</button>
+      <button onclick="filterByGroup('K')" data-group="K" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp K</button>
+      <button onclick="filterByGroup('L')" data-group="L" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp L</button>
+    </div>
+  </div>
+
+  <div id="fixtures-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
+    <div class="skeleton rounded-xl h-32"></div>
+    <div class="skeleton rounded-xl h-32"></div>
+    <div class="skeleton rounded-xl h-32"></div>
+    <div class="skeleton rounded-xl h-32"></div>
+    <div class="skeleton rounded-xl h-32"></div>
+    <div class="skeleton rounded-xl h-32"></div>
+  </div>
+  <div id="no-fixtures" class="hidden text-center py-xl text-on-surface-variant font-body-sm text-body-sm">
+    No fixtures match this filter.
+  </div>
+</section>
+
+<!-- Full Standings Table -->
+<section class="mt-lg anim-slide-up" style="animation-delay:.55s">
+  <details class="tonal-layer-1 rounded-xl border border-surface-variant overflow-hidden">
+    <summary class="p-md cursor-pointer flex items-center justify-between select-none bg-surface-container-low hover:bg-surface-container transition-colors">
+      <h2 class="font-headline-md text-headline-md text-on-surface">Full Tournament Standings</h2>
+      <span class="material-symbols-outlined text-secondary chevron">expand_more</span>
+    </summary>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse" id="standings-table">
+        <thead>
+          <tr class="bg-secondary text-on-secondary">
+            <th class="px-md py-sm font-label-caps text-label-caps">#</th>
+            <th class="px-md py-sm font-label-caps text-label-caps">Team</th>
+            <th class="px-md py-sm font-label-caps text-label-caps">Group</th>
+            <th class="px-md py-sm font-label-caps text-label-caps text-right">Win%</th>
+            <th class="px-md py-sm font-label-caps text-label-caps text-right">Final%</th>
+            <th class="px-md py-sm font-label-caps text-label-caps text-right">Semi%</th>
+            <th class="px-md py-sm font-label-caps text-label-caps text-right">QF%</th>
+            <th class="px-md py-sm font-label-caps text-label-caps text-right">R16%</th>
+          </tr>
+        </thead>
+        <tbody id="standings-body" class="divide-y divide-surface-variant"></tbody>
+      </table>
+    </div>
+  </details>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let allFixtures = [];
+
+  // ── Load tournament data ──────────────────────────────────────────────────
+  async function loadTournament() {
+    const res  = await fetch('/api/tournament');
+    const data = await res.json();
+    data.sort((a, b) => b.win_pct - a.win_pct);
+    renderContenders(data.slice(0, 6));
+    renderStandings(data);
+  }
+
+  function renderContenders(teams) {
+    const grid = document.getElementById('contenders-grid');
+    // Cards stagger in with 70ms between each
+    grid.innerHTML = teams.map((t, i) => `
+      <a href="/team/${encodeURIComponent(t.team)}"
+         style="animation-delay:${i * 70}ms"
+         class="tonal-layer-1 rounded-xl border border-surface-variant p-md flex flex-col items-center text-center
+                cursor-pointer no-underline group card-lift anim-scale-in">
+        <div class="relative mb-sm">
+          <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-surface-variant group-hover:border-primary
+                      transition-[border-color] duration-200 bg-surface-container-low flex items-center justify-center p-1">
+            <img src="https://flagcdn.com/w80/${t.country_code}.png"
+                 alt="${t.team}" class="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110"
+                 onerror="this.src='https://flagcdn.com/w80/un.png'"/>
+          </div>
+          <span class="absolute -top-1 -left-1 bg-primary text-on-primary rounded-full w-5 h-5 flex items-center justify-center font-label-caps" style="font-size:10px">${i+1}</span>
+        </div>
+        <div class="font-bold text-on-surface text-body-sm mb-xs">${t.team}</div>
+        <div class="font-data-display text-data-display text-primary">${t.win_pct.toFixed(1)}%</div>
+        <div class="font-label-caps text-label-caps text-secondary">Win probability</div>
+        <div class="mt-xs px-sm py-1 bg-surface-container rounded-full font-label-caps text-label-caps text-on-surface-variant
+                    transition-colors duration-200 group-hover:bg-primary-container/30">Group ${t.group}</div>
+      </a>
+    `).join('');
+  }
+
+  function renderStandings(data) {
+    const body = document.getElementById('standings-body');
+    body.innerHTML = data.map((t, i) => `
+      <tr class="standings-row">
+        <td class="px-md py-sm font-label-caps text-label-caps text-secondary">${i+1}</td>
+        <td class="px-md py-sm">
+          <a href="/team/${encodeURIComponent(t.team)}" class="flex items-center gap-sm no-underline hover:text-primary transition-colors duration-150">
+            <img src="https://flagcdn.com/w40/${t.country_code}.png" alt="" class="w-6 h-4 object-cover rounded-sm" onerror="this.style.display='none'"/>
+            <span class="font-bold text-body-sm">${t.team}</span>
+          </a>
+        </td>
+        <td class="px-md py-sm font-label-caps text-label-caps text-secondary">Group ${t.group}</td>
+        <td class="px-md py-sm text-right font-bold text-primary">${t.win_pct.toFixed(1)}%</td>
+        <td class="px-md py-sm text-right text-on-surface-variant">${t.final_pct.toFixed(1)}%</td>
+        <td class="px-md py-sm text-right text-on-surface-variant">${t.semi_pct.toFixed(1)}%</td>
+        <td class="px-md py-sm text-right text-on-surface-variant">${t.qf_pct.toFixed(1)}%</td>
+        <td class="px-md py-sm text-right text-on-surface-variant">${t.r16_pct.toFixed(1)}%</td>
+      </tr>
+    `).join('');
+  }
+
+  // ── Load fixtures ─────────────────────────────────────────────────────────
+  async function loadFixtures() {
+    const res  = await fetch('/api/fixtures');
+    const body = await res.json();
+    allFixtures = body.fixtures;
+    renderFixtures(allFixtures);
+  }
+
+  function renderFixtures(fixtures, animate = true) {
+    const grid  = document.getElementById('fixtures-grid');
+    const empty = document.getElementById('no-fixtures');
+    if (!fixtures.length) {
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    const statusColor = { completed: 'text-secondary', live: 'text-error',     upcoming: 'text-primary' };
+    const statusIcon  = { completed: 'check_circle',   live: 'radio_button_checked', upcoming: 'schedule' };
+
+    const html = fixtures.map((f, i) => `
+      <div style="animation-delay:${i * 55}ms"
+           class="tonal-layer-1 rounded-xl border border-surface-variant p-md flex flex-col gap-sm group card-lift anim-scale-in">
+        <div class="flex items-center justify-between">
+          <span class="font-label-caps text-label-caps text-secondary">${f.stage}${f.matchday ? ' · MD' + f.matchday : ''}</span>
+          <span class="flex items-center gap-xs font-label-caps text-label-caps ${statusColor[f.status] || 'text-secondary'}">
+            <span class="material-symbols-outlined text-[14px]${f.status === 'live' ? ' animate-pulse' : ''}">${statusIcon[f.status] || 'schedule'}</span>
+            ${f.status.toUpperCase()}
+          </span>
+        </div>
+        <div class="flex items-center justify-between gap-sm">
+          <div class="flex items-center gap-sm flex-1">
+            <img src="https://flagcdn.com/w40/${f.home_code}.png" alt="${f.home}"
+                 class="w-8 h-6 object-cover rounded-sm border border-surface-variant transition-transform duration-200 group-hover:scale-105"
+                 onerror="this.style.display='none'"/>
+            <span class="font-bold text-body-lg truncate">${f.home}</span>
+          </div>
+          <span class="font-label-caps text-label-caps text-secondary px-sm shrink-0">vs</span>
+          <div class="flex items-center gap-sm flex-1 justify-end">
+            <span class="font-bold text-body-lg truncate text-right">${f.away}</span>
+            <img src="https://flagcdn.com/w40/${f.away_code}.png" alt="${f.away}"
+                 class="w-8 h-6 object-cover rounded-sm border border-surface-variant transition-transform duration-200 group-hover:scale-105"
+                 onerror="this.style.display='none'"/>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-xs border-t border-surface-variant">
+          <span class="font-label-caps text-label-caps text-on-surface-variant">${f.date}</span>
+          <button onclick="goPredict('${f.home}','${f.away}','${f.date}')"
+                  class="bg-primary text-on-primary px-sm py-xs rounded-lg font-label-caps text-label-caps
+                         hover:opacity-90 active:scale-95 transition-all duration-150 flex items-center gap-xs">
+            <span class="material-symbols-outlined text-[14px]">analytics</span>
+            Predict
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    // Cross-fade the grid when filtering
+    if (animate && grid.children.length > 0) {
+      grid.classList.add('fading');
+      setTimeout(() => {
+        grid.innerHTML = html;
+        grid.classList.remove('fading');
+      }, 180);
+    } else {
+      grid.innerHTML = html;
+    }
+  }
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  let activeStatus = 'all', activeGroup = null;
+
+  function applyFilters() {
+    let filtered = allFixtures;
+    if (activeStatus !== 'all') filtered = filtered.filter(f => f.status === activeStatus);
+    if (activeGroup)            filtered = filtered.filter(f => f.group === activeGroup);
+    renderFixtures(filtered, true);
+  }
+
+  function filterFixtures(status) {
+    activeStatus = status;
+    activeGroup  = null;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      const on = b.dataset.filter === status;
+      b.classList.toggle('bg-primary',           on);
+      b.classList.toggle('text-on-primary',      on);
+      b.classList.toggle('bg-surface-container', !on);
+      b.classList.toggle('text-on-surface-variant', !on);
+    });
+    document.querySelectorAll('.group-btn').forEach(b => {
+      b.classList.remove('bg-primary', 'text-on-primary');
+      b.classList.add('bg-surface-container', 'text-on-surface-variant');
+    });
+    applyFilters();
+  }
+
+  function filterByGroup(group) {
+    activeGroup  = activeGroup === group ? null : group;
+    activeStatus = 'all';
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      const on = b.dataset.filter === 'all';
+      b.classList.toggle('bg-primary',           on);
+      b.classList.toggle('text-on-primary',      on);
+      b.classList.toggle('bg-surface-container', !on);
+      b.classList.toggle('text-on-surface-variant', !on);
+    });
+    document.querySelectorAll('.group-btn').forEach(b => {
+      const on = b.dataset.group === activeGroup;
+      b.classList.toggle('bg-primary',           on);
+      b.classList.toggle('text-on-primary',      on);
+      b.classList.toggle('bg-surface-container', !on);
+      b.classList.toggle('text-on-surface-variant', !on);
+    });
+    applyFilters();
+  }
+
+  function goPredict(home, away, date) {
+    window.location.href = `/match?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&date=${date}`;
+  }
+
+  // ── Group Standings ───────────────────────────────────────────────────────
+  let allStandings = {};
+  let activeGsGroup = 'A';
+
+  async function loadGroupStandings() {
+    try {
+      const res  = await fetch('/api/standings');
+      const data = await res.json();
+      allStandings = data.standings;
+
+      if (data.source === 'espn') {
+        const badge = document.getElementById('gs-source-badge');
+        badge.classList.remove('hidden');
+        badge.style.display = 'flex';
+      }
+
+      // Build tab buttons
+      const groups = Object.keys(allStandings).sort();
+      document.getElementById('gs-tabs').innerHTML = groups.map(g => `
+        <button onclick="showGroupStandings('${g}')" data-gs="${g}"
+                class="gs-tab px-sm py-xs rounded-lg font-label-caps text-label-caps transition-all duration-150 active:scale-95
+                       ${g === groups[0] ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}">
+          Group ${g}
+        </button>
+      `).join('');
+
+      showGroupStandings(groups[0]);
+      document.getElementById('gs-legend').style.removeProperty('display');
+    } catch (e) {
+      document.getElementById('gs-card').innerHTML =
+        '<p class="p-md font-body-sm text-on-surface-variant text-center">Could not load standings.</p>';
+    }
+  }
+
+  function showGroupStandings(group) {
+    activeGsGroup = group;
+
+    // Update tabs
+    document.querySelectorAll('.gs-tab').forEach(b => {
+      const on = b.dataset.gs === group;
+      b.classList.toggle('bg-primary',              on);
+      b.classList.toggle('text-on-primary',         on);
+      b.classList.toggle('bg-surface-container',    !on);
+      b.classList.toggle('text-on-surface-variant', !on);
+    });
+
+    const teams = allStandings[group] || [];
+
+    const statusBar = {
+      qualified:  'bg-primary',
+      potential:  'bg-tertiary',
+      eliminated: 'bg-surface-container-high',
+      unknown:    'bg-surface-container',
+    };
+    const statusRowBg = {
+      qualified:  'bg-primary/[0.04]',
+      potential:  'bg-tertiary/[0.04]',
+      eliminated: '',
+      unknown:    '',
+    };
+
+    const card = document.getElementById('gs-card');
+    // Cross-fade
+    card.style.opacity = '0';
+    card.style.transition = 'opacity .18s ease';
+
+    setTimeout(() => {
+      card.innerHTML = `
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-secondary text-on-secondary">
+                <th class="px-md py-sm font-label-caps text-label-caps w-10">#</th>
+                <th class="px-md py-sm font-label-caps text-label-caps">Team</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-8 hidden sm:table-cell">P</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-8">W</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-8">D</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-8">L</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-8 hidden md:table-cell">GF</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-8 hidden md:table-cell">GA</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-8 hidden sm:table-cell">GD</th>
+                <th class="px-md py-sm font-label-caps text-label-caps text-center w-12">Pts</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-surface-variant">
+              ${teams.map((t, i) => {
+                const bar = statusBar[t.status]  || 'bg-surface-container';
+                const row = statusRowBg[t.status] || '';
+                const gdFmt = t.gd > 0 ? '+' + t.gd : t.gd;
+                const gdClr = t.gd > 0 ? 'text-primary font-bold'
+                            : t.gd < 0 ? 'text-error'
+                            : 'text-on-surface-variant';
+                return `
+                  <tr class="standings-row ${row}">
+                    <td class="px-md py-sm">
+                      <div class="flex items-center gap-sm">
+                        <span class="w-1 h-5 ${bar} rounded-full shrink-0"></span>
+                        <span class="font-label-caps text-label-caps text-secondary">${i + 1}</span>
+                      </div>
+                    </td>
+                    <td class="px-md py-sm">
+                      <div class="flex items-center gap-sm">
+                        <img src="https://flagcdn.com/w40/${t.country_code}.png" alt=""
+                             class="w-6 h-4 object-cover rounded-sm border border-surface-variant shrink-0"
+                             onerror="this.style.display='none'"/>
+                        <span class="font-body-sm text-body-sm font-bold truncate">${t.team}</span>
+                      </div>
+                    </td>
+                    <td class="px-md py-sm text-center font-body-sm text-on-surface-variant hidden sm:table-cell">${t.played}</td>
+                    <td class="px-md py-sm text-center font-body-sm text-on-surface-variant">${t.won}</td>
+                    <td class="px-md py-sm text-center font-body-sm text-on-surface-variant">${t.drawn}</td>
+                    <td class="px-md py-sm text-center font-body-sm text-on-surface-variant">${t.lost}</td>
+                    <td class="px-md py-sm text-center font-body-sm text-on-surface-variant hidden md:table-cell">${t.gf}</td>
+                    <td class="px-md py-sm text-center font-body-sm text-on-surface-variant hidden md:table-cell">${t.ga}</td>
+                    <td class="px-md py-sm text-center font-body-sm ${gdClr} hidden sm:table-cell">${gdFmt}</td>
+                    <td class="px-md py-sm text-center">
+                      <span class="font-bold text-body-sm ${t.status === 'qualified' ? 'text-primary' : 'text-on-surface'}">${t.pts}</span>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      card.style.opacity = '1';
+    }, 180);
+  }
+
+  // Init
+  loadTournament();
+  loadFixtures();
+  loadGroupStandings();
+</script>
+{% endblock %}

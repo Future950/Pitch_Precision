@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Pitch Precision | World Cup 2026{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary-container":          "#2ecc71",
+            "inverse-surface":            "#2e3132",
+            "surface-container-highest":  "#e1e3e4",
+            "primary-fixed-dim":          "#4ae183",
+            "tertiary-fixed":             "#cce5ff",
+            "on-primary-fixed-variant":   "#005228",
+            "surface-bright":             "#f8f9fa",
+            "on-tertiary-container":      "#004970",
+            "surface-tint":               "#006d37",
+            "background":                 "#f8f9fa",
+            "secondary":                  "#4f6073",
+            "surface-container-low":      "#f3f4f5",
+            "secondary-fixed":            "#d2e4fb",
+            "outline":                    "#6c7b6d",
+            "primary-fixed":              "#6bfe9c",
+            "on-secondary-fixed":         "#0b1d2d",
+            "on-tertiary":                "#ffffff",
+            "on-primary-container":       "#005027",
+            "on-tertiary-fixed-variant":  "#004b73",
+            "on-primary":                 "#ffffff",
+            "tertiary-fixed-dim":         "#92ccff",
+            "error-container":            "#ffdad6",
+            "on-background":              "#191c1d",
+            "inverse-primary":            "#4ae183",
+            "surface-container":          "#edeeef",
+            "on-secondary-container":     "#556679",
+            "error":                      "#ba1a1a",
+            "tertiary":                   "#006397",
+            "surface-variant":            "#e1e3e4",
+            "on-surface":                 "#191c1d",
+            "surface":                    "#f8f9fa",
+            "primary":                    "#006d37",
+            "secondary-fixed-dim":        "#b7c8de",
+            "secondary-container":        "#d2e4fb",
+            "on-error-container":         "#93000a",
+            "surface-dim":                "#d9dadb",
+            "outline-variant":            "#bbcbbb",
+            "on-surface-variant":         "#3d4a3e",
+            "on-secondary-fixed-variant": "#38485a",
+            "on-secondary":               "#ffffff",
+            "surface-container-lowest":   "#ffffff",
+            "on-error":                   "#ffffff",
+            "inverse-on-surface":         "#f0f1f2",
+            "surface-container-high":     "#e7e8e9",
+            "tertiary-container":         "#5fbaff",
+            "on-primary-fixed":           "#00210c",
+            "on-tertiary-fixed":          "#001d31",
+          },
+          borderRadius: {
+            DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem",
+          },
+          spacing: {
+            margin: "32px", xl: "64px", lg: "40px",
+            gutter: "24px", md: "24px", base: "8px", sm: "12px", xs: "4px",
+          },
+          fontFamily: {
+            "label-caps": ["Inter"], "body-sm": ["Inter"],
+            "headline-md": ["Inter"], "body-lg": ["Inter"],
+            "data-display": ["Inter"], "headline-lg-mobile": ["Inter"],
+            "headline-lg": ["Inter"],
+          },
+          fontSize: {
+            "label-caps":        ["12px", {lineHeight:"16px", letterSpacing:"0.05em", fontWeight:"600"}],
+            "body-sm":           ["14px", {lineHeight:"20px", fontWeight:"400"}],
+            "headline-md":       ["20px", {lineHeight:"28px", fontWeight:"600"}],
+            "body-lg":           ["16px", {lineHeight:"24px", fontWeight:"400"}],
+            "data-display":      ["24px", {lineHeight:"24px", letterSpacing:"-0.01em", fontWeight:"700"}],
+            "headline-lg-mobile":["24px", {lineHeight:"32px", letterSpacing:"-0.01em", fontWeight:"700"}],
+            "headline-lg":       ["32px", {lineHeight:"40px", letterSpacing:"-0.02em", fontWeight:"700"}],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .tonal-layer-1 {
+      background-color: #ffffff;
+      box-shadow: 0 4px 6px -1px rgba(15,23,42,.02), 0 2px 4px -2px rgba(15,23,42,.02);
+    }
+    .prediction-gradient {
+      background: linear-gradient(135deg, #006d37 0%, #2ecc71 100%);
+    }
+    .radar-grid  { stroke: #e1e3e4; stroke-width: 1; fill: none; }
+    .radar-area  { fill: rgba(46,204,113,.20); stroke: #006d37; stroke-width: 2; }
+    .fade-in { animation: fadeIn .35s ease-out; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    .skeleton { background: linear-gradient(90deg, #e7e8e9 25%, #f0f1f2 50%, #e7e8e9 75%); background-size:200% 100%; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .nav-active { color: #006d37 !important; border-bottom: 2px solid #006d37; padding-bottom: 4px; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-background text-on-background font-body-lg min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-surface border-b border-surface-variant sticky top-0 z-50">
+    <nav class="flex justify-between items-center w-full px-margin py-base max-w-7xl mx-auto">
+      <a href="/" class="font-headline-md text-headline-md font-bold text-primary no-underline">
+        Pitch Precision
+      </a>
+      <div class="hidden md:flex items-center gap-gutter">
+        <a id="nav-predictions" href="/"       class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Predictions</a>
+        <a id="nav-simulator"   href="/match"  class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Simulator</a>
+        <a id="nav-insights"    href="/team"   class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Insights</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Page Content -->
+  <main class="flex-grow w-full max-w-7xl mx-auto px-margin py-lg">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-surface-container-low border-t border-surface-variant mt-xl">
+    <div class="flex flex-col md:flex-row justify-between items-center px-margin py-lg w-full max-w-7xl mx-auto">
+      <div class="font-label-caps text-label-caps font-black text-secondary mb-md md:mb-0">PITCH PRECISION ANALYTICS</div>
+      <div class="flex gap-gutter mb-md md:mb-0">
+        <a href="#" class="text-on-surface-variant font-body-sm text-body-sm hover:underline decoration-primary transition-all">About the Model</a>
+        <a href="#" class="text-on-surface-variant font-body-sm text-body-sm hover:underline decoration-primary transition-all">Data Sources</a>
+        <a href="#" class="text-on-surface-variant font-body-sm text-body-sm hover:underline decoration-primary transition-all">Methodology</a>
+      </div>
+      <div class="text-on-surface-variant font-body-sm text-body-sm opacity-90">© 2026 Pitch Precision Analytics</div>
+    </div>
+  </footer>
+
+  <script>
+    // Set active nav link based on current path
+    (function() {
+      const path = window.location.pathname;
+      const map = {'/': 'nav-predictions', '/match': 'nav-simulator', '/team': 'nav-insights'};
+      const key = Object.keys(map).find(k => k === '/' ? path === '/' : path.startsWith(k));
+      if (key) {
+        const el = document.getElementById(map[key]);
+        if (el) el.classList.add('nav-active');
+      }
+    })();
+
+    // Generic flag image fallback
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('img[data-flag]').forEach(img => {
+        img.onerror = () => { img.src = 'https://flagcdn.com/w80/un.png'; };
+      });
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
