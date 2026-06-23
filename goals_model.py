@@ -90,5 +90,28 @@ def predict_match_goals(home_model, away_model, features: dict) -> dict:
     return {"home_xg": round(home_xg, 3), "away_xg": round(away_xg, 3)}
 
 
-def sample_scoreline(home_xg: float, away_xg: float) -> tuple:
+def sample_scoreline(home_xg: float, away_xg: float, rho: float = -0.13) -> tuple:
+    """
+    Dixon-Coles corrected scoreline sampler.
+
+    rho=-0.13 is the empirically fitted value for international football.
+    Upweights 0-0 and 1-1, downweights 0-1 and 1-0, correcting the
+    independence assumption of plain Poisson for low-scoring outcomes.
+    """
+    max_w = 1.0 + abs(rho) * max(home_xg, away_xg, 1.0)
+    for _ in range(100):
+        h = int(np.random.poisson(home_xg))
+        a = int(np.random.poisson(away_xg))
+        if h == 0 and a == 0:
+            w = 1.0 - home_xg * away_xg * rho
+        elif h == 0 and a == 1:
+            w = 1.0 + home_xg * rho
+        elif h == 1 and a == 0:
+            w = 1.0 + away_xg * rho
+        elif h == 1 and a == 1:
+            w = 1.0 - rho
+        else:
+            w = 1.0
+        if np.random.uniform(0.0, max_w) <= w:
+            return h, a
     return int(np.random.poisson(home_xg)), int(np.random.poisson(away_xg))

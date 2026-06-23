@@ -293,6 +293,21 @@ def get_head_to_head(results_df, home_team, away_team, before_date, n=10):
     return float(wins / len(h2h))
 
 
+def get_h2h_avg_goals(results_df, home_team, away_team, before_date, n=10):
+    """Average total goals per match in last n H2H meetings."""
+    mask = (
+        (
+            ((results_df["home_team"] == home_team) & (results_df["away_team"] == away_team))
+            | ((results_df["home_team"] == away_team) & (results_df["away_team"] == home_team))
+        )
+        & (results_df["date"] < before_date)
+    )
+    h2h = results_df[mask].tail(n)
+    if h2h.empty:
+        return 2.5  # average total goals in competitive internationals
+    return float((h2h["home_score"] + h2h["away_score"]).mean())
+
+
 # ─────────────────────────────────────────────
 # 4. BUILD FULL FEATURE MATRIX
 # ─────────────────────────────────────────────
@@ -340,7 +355,8 @@ def build_feature_matrix(results_df, rankings_df=None, elo_history=None):
         home_sv = get_squad_value_log(rankings_df, home, date) if rankings_df is not None else 8.0
         away_sv = get_squad_value_log(rankings_df, away, date) if rankings_df is not None else 8.0
 
-        h2h = get_head_to_head(results_df, home, away, date)
+        h2h        = get_head_to_head(results_df, home, away, date)
+        h2h_goals  = get_h2h_avg_goals(results_df, home, away, date)
 
         hs  = match["home_score"]
         as_ = match["away_score"]
@@ -369,7 +385,10 @@ def build_feature_matrix(results_df, rankings_df=None, elo_history=None):
             "home_squad_value_log":    home_sv,
             "away_squad_value_log":    away_sv,
             "squad_value_log_diff":    home_sv - away_sv,
+            "home_attack_vs_away_def": hgs10 / max(agc10, 0.5),
+            "away_attack_vs_home_def": ags10 / max(hgc10, 0.5),
             "h2h_home_winrate":        h2h,
+            "h2h_avg_goals":           h2h_goals,
             "is_neutral":              int(match.get("neutral", False)),
             "outcome":                 outcome,
             "home_goals":              hs,
@@ -402,6 +421,9 @@ FEATURE_COLS = [
     "home_squad_value_log",
     "away_squad_value_log",
     "squad_value_log_diff",
+    "home_attack_vs_away_def",
+    "away_attack_vs_home_def",
     "h2h_home_winrate",
+    "h2h_avg_goals",
     "is_neutral",
 ]

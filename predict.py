@@ -14,7 +14,8 @@ from pathlib import Path
 from features import (
     load_results, load_rankings, compute_elo_history,
     get_team_form, get_goals_avg, get_draw_rate,
-    get_fifa_rank_points, get_head_to_head, get_elo_rating, get_squad_value_log,
+    get_fifa_rank_points, get_head_to_head, get_h2h_avg_goals,
+    get_elo_rating, get_squad_value_log,
 )
 from outcome_model import predict_match_outcome
 from goals_model import predict_match_goals
@@ -62,7 +63,10 @@ features = {
     "home_squad_value_log":    get_squad_value_log(rankings_df, home, date),
     "away_squad_value_log":    get_squad_value_log(rankings_df, away, date),
     "squad_value_log_diff":    get_squad_value_log(rankings_df, home, date) - get_squad_value_log(rankings_df, away, date),
+    "home_attack_vs_away_def": get_goals_avg(results_df, home, date, n=10)[0] / max(get_goals_avg(results_df, away, date, n=10)[1], 0.5),
+    "away_attack_vs_home_def": get_goals_avg(results_df, away, date, n=10)[0] / max(get_goals_avg(results_df, home, date, n=10)[1], 0.5),
     "h2h_home_winrate":        get_head_to_head(results_df, home, away, date),
+    "h2h_avg_goals":           get_h2h_avg_goals(results_df, home, away, date),
     "is_neutral":              args.neutral,
 }
 

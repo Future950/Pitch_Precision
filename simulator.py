@@ -73,7 +73,10 @@ def build_match_features(home_team, away_team, team_store):
         "home_squad_value_log":      h["squad_value_log"],
         "away_squad_value_log":      a["squad_value_log"],
         "squad_value_log_diff":      h["squad_value_log"] - a["squad_value_log"],
+        "home_attack_vs_away_def":   h["goals_scored_avg"] / max(a["goals_conceded_avg"], 0.5),
+        "away_attack_vs_home_def":   a["goals_scored_avg"] / max(h["goals_conceded_avg"], 0.5),
         "h2h_home_winrate":          0.5,
+        "h2h_avg_goals":             2.5,   # neutral default; H2H lookup skipped for simulator speed
         "is_neutral":                1,
     }
 

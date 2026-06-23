@@ -10,7 +10,8 @@ from pathlib import Path
 from features import (
     load_results, load_rankings, build_feature_matrix, compute_elo_history,
     get_team_form, get_goals_avg, get_draw_rate,
-    get_fifa_rank_points, get_head_to_head, get_elo_rating, get_squad_value_log,
+    get_fifa_rank_points, get_head_to_head, get_h2h_avg_goals,
+    get_elo_rating, get_squad_value_log,
 )
 from outcome_model import train_outcome_model, predict_match_outcome
 from goals_model import train_goals_model, predict_match_goals
@@ -106,7 +107,8 @@ def make_matchup_features(home, away, results_df, rankings_df, elo_history, date
     aelo    = get_elo_rating(elo_history, away, date)
     hsv     = get_squad_value_log(rankings_df, home, date)
     asv     = get_squad_value_log(rankings_df, away, date)
-    h2h     = get_head_to_head(results_df, home, away, date)
+    h2h      = get_head_to_head(results_df, home, away, date)
+    h2hgoals = get_h2h_avg_goals(results_df, home, away, date)
     return {
         "home_form": hf, "away_form": af,
         "home_goals_scored_avg": hgs, "home_goals_conceded_avg": hgc,
@@ -118,7 +120,10 @@ def make_matchup_features(home, away, results_df, rankings_df, elo_history, date
         "home_elo": helo, "away_elo": aelo, "elo_diff": helo - aelo,
         "home_squad_value_log": hsv, "away_squad_value_log": asv,
         "squad_value_log_diff": hsv - asv,
+        "home_attack_vs_away_def": hgs / max(agc, 0.5),
+        "away_attack_vs_home_def": ags / max(hgc, 0.5),
         "h2h_home_winrate": h2h,
+        "h2h_avg_goals": h2hgoals,
         "is_neutral": neutral,
     }
 
