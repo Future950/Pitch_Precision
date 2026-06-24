@@ -1,10 +1,10 @@
 === Outcome Model ===
   accuracy: 0.6193
-  log_loss: 0.8471
-  best_iteration: 244
+  log_loss: 0.8485
+  best_iteration: 248
 
 === Goals Model ===
-  home_goals_mae: 1.0051
+  home_goals_mae: 1.0099
   away_goals_mae: 0.8544
-  home_goals_rmse: 1.3186
-  away_goals_rmse: 1.127
+  home_goals_rmse: 1.3244
+  away_goals_rmse: 1.1272
