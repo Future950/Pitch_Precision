@@ -9,3 +9,5 @@ dist/
 build/
 .DS_Store
 Thumbs.db
+screenshot_*.png
+outputs/feature_matrix.csv

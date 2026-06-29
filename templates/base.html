@@ -119,9 +119,11 @@
         Pitch Precision
       </a>
       <div class="hidden md:flex items-center gap-gutter">
-        <a id="nav-predictions" href="/"       class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Predictions</a>
-        <a id="nav-simulator"   href="/match"  class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Simulator</a>
-        <a id="nav-insights"    href="/team"   class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Insights</a>
+        <a id="nav-predictions" href="/"        class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Predictions</a>
+        <a id="nav-simulator"   href="/match"   class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Simulator</a>
+        <a id="nav-insights"    href="/team"    class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Insights</a>
+        <a id="nav-players"     href="/players"  class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Players</a>
+        <a id="nav-bracket"     href="/bracket"  class="nav-link font-body-lg text-body-lg text-secondary hover:text-primary transition-colors">Bracket</a>
       </div>
     </nav>
   </header>
@@ -148,7 +150,7 @@
     // Set active nav link based on current path
     (function() {
       const path = window.location.pathname;
-      const map = {'/': 'nav-predictions', '/match': 'nav-simulator', '/team': 'nav-insights'};
+      const map = {'/': 'nav-predictions', '/match': 'nav-simulator', '/team': 'nav-insights', '/players': 'nav-players', '/bracket': 'nav-bracket'};
       const key = Object.keys(map).find(k => k === '/' ? path === '/' : path.startsWith(k));
       if (key) {
         const el = document.getElementById(map[key]);

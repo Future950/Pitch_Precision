@@ -103,7 +103,7 @@
         <div class="font-label-caps text-label-caps text-secondary">Simulations</div>
       </div>
       <div class="tonal-layer-1 rounded-xl border border-surface-variant px-md py-sm text-center card-lift anim-scale-in" style="animation-delay:.46s">
-        <div class="font-data-display text-data-display text-on-surface">61.7%</div>
+        <div class="font-data-display text-data-display text-on-surface">61.9%</div>
         <div class="font-label-caps text-label-caps text-secondary">Model Accuracy</div>
       </div>
     </div>
@@ -162,41 +162,58 @@
   </div>
 </section>
 
-<!-- Fixture Browser -->
-<section class="anim-slide-up" style="animation-delay:.45s">
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-md mb-md">
-    <h2 class="font-headline-md text-headline-md text-on-surface">Fixture Browser</h2>
-    <!-- Filter tabs -->
-    <div class="flex flex-wrap gap-xs" id="filter-tabs">
-      <button onclick="filterFixtures('all')"      data-filter="all"      class="filter-btn px-sm py-xs rounded-lg font-label-caps text-label-caps bg-primary text-on-primary">All</button>
-      <button onclick="filterFixtures('upcoming')" data-filter="upcoming" class="filter-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Upcoming</button>
-      <button onclick="filterFixtures('live')"     data-filter="live"     class="filter-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Live</button>
-      <div class="w-px bg-outline-variant mx-xs"></div>
-      <button onclick="filterByGroup('A')" data-group="A" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp A</button>
-      <button onclick="filterByGroup('B')" data-group="B" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp B</button>
-      <button onclick="filterByGroup('C')" data-group="C" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp C</button>
-      <button onclick="filterByGroup('D')" data-group="D" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp D</button>
-      <button onclick="filterByGroup('E')" data-group="E" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp E</button>
-      <button onclick="filterByGroup('F')" data-group="F" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp F</button>
-      <button onclick="filterByGroup('G')" data-group="G" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp G</button>
-      <button onclick="filterByGroup('H')" data-group="H" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp H</button>
-      <button onclick="filterByGroup('I')" data-group="I" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp I</button>
-      <button onclick="filterByGroup('J')" data-group="J" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp J</button>
-      <button onclick="filterByGroup('K')" data-group="K" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp K</button>
-      <button onclick="filterByGroup('L')" data-group="L" class="group-btn px-sm py-xs rounded-lg font-label-caps text-label-caps text-on-surface-variant bg-surface-container hover:bg-surface-container-high">Grp L</button>
+<!-- Live & Upcoming -->
+<section class="mb-lg anim-slide-up" style="animation-delay:.43s">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-sm mb-md">
+    <div class="flex items-center gap-md">
+      <h2 class="font-headline-md text-headline-md text-on-surface">Live &amp; Upcoming</h2>
+      <span id="live-updated" class="font-label-caps text-[10px] text-secondary"></span>
+    </div>
+    <div class="flex gap-xs">
+      <button onclick="setLiveFilter('all')"      data-lf="all"      class="lf-btn px-sm py-xs rounded-lg font-label-caps text-label-caps bg-primary text-on-primary transition-all active:scale-95">All</button>
+      <button onclick="setLiveFilter('live')"     data-lf="live"     class="lf-btn px-sm py-xs rounded-lg font-label-caps text-label-caps bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">Live</button>
+      <button onclick="setLiveFilter('upcoming')" data-lf="upcoming" class="lf-btn px-sm py-xs rounded-lg font-label-caps text-label-caps bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95">Upcoming</button>
     </div>
   </div>
-
-  <div id="fixtures-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
-    <div class="skeleton rounded-xl h-32"></div>
-    <div class="skeleton rounded-xl h-32"></div>
-    <div class="skeleton rounded-xl h-32"></div>
-    <div class="skeleton rounded-xl h-32"></div>
-    <div class="skeleton rounded-xl h-32"></div>
-    <div class="skeleton rounded-xl h-32"></div>
+  <div id="live-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
+    <div class="skeleton rounded-xl h-28"></div>
+    <div class="skeleton rounded-xl h-28"></div>
+    <div class="skeleton rounded-xl h-28"></div>
   </div>
-  <div id="no-fixtures" class="hidden text-center py-xl text-on-surface-variant font-body-sm text-body-sm">
-    No fixtures match this filter.
+  <p id="live-empty" class="hidden text-center py-md font-body-sm text-on-surface-variant">No live or upcoming matches right now.</p>
+</section>
+
+<!-- Group Fixtures -->
+<section class="anim-slide-up" style="animation-delay:.45s">
+  <div class="flex items-center justify-between mb-md">
+    <h2 class="font-headline-md text-headline-md text-on-surface">Group Fixtures</h2>
+    <span id="gf-source-badge" class="hidden font-label-caps text-label-caps text-secondary flex items-center gap-xs">
+      <span class="live-dot w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>Live
+    </span>
+  </div>
+
+  <!-- Group tabs -->
+  <div class="flex flex-wrap gap-xs mb-md" id="gf-tabs">
+    {% for g in ['A','B','C','D','E','F','G','H','I','J','K','L'] %}
+    <button onclick="showGroupFixtures('{{g}}')" data-gf="{{g}}"
+            class="gf-tab px-sm py-xs rounded-lg font-label-caps text-label-caps
+                   bg-surface-container text-on-surface-variant hover:bg-surface-container-high
+                   transition-all duration-150 active:scale-95">
+      Group {{g}}
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- Match cards -->
+  <div id="gf-container">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
+      <div class="skeleton rounded-xl h-28"></div>
+      <div class="skeleton rounded-xl h-28"></div>
+      <div class="skeleton rounded-xl h-28"></div>
+      <div class="skeleton rounded-xl h-28"></div>
+      <div class="skeleton rounded-xl h-28"></div>
+      <div class="skeleton rounded-xl h-28"></div>
+    </div>
   </div>
 </section>
 
@@ -230,8 +247,6 @@
 
 {% block scripts %}
 <script>
-  let allFixtures = [];
-
   // ── Load tournament data ──────────────────────────────────────────────────
   async function loadTournament() {
     const res  = await fetch('/api/tournament');
@@ -288,14 +303,228 @@
     `).join('');
   }
 
-  // ── Load fixtures ─────────────────────────────────────────────────────────
-  async function loadFixtures() {
-    const res  = await fetch('/api/fixtures');
-    const body = await res.json();
-    allFixtures = body.fixtures;
-    renderFixtures(allFixtures);
+  // ── Live & Upcoming ───────────────────────────────────────────────────────
+  let allLiveMatches   = [];
+  let activeLiveFilter = 'all';
+
+  async function loadLiveFixtures(silent = false) {
+    try {
+      const res  = await fetch('/api/fixtures');
+      const body = await res.json();
+      allLiveMatches = body.fixtures || [];
+
+      // Auto-switch to Live tab if any match just went live
+      const hasLive = allLiveMatches.some(m => m.status === 'live');
+      if (hasLive && activeLiveFilter === 'upcoming') {
+        setLiveFilter('live');
+      } else {
+        // Re-render with current filter (All excludes completed)
+        const filtered = activeLiveFilter === 'all'
+          ? allLiveMatches.filter(m => m.status !== 'completed')
+          : allLiveMatches.filter(m => m.status === activeLiveFilter);
+        renderLive(filtered);
+      }
+
+      // Update timestamp
+      document.getElementById('live-updated').textContent =
+        'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    } catch(e) {
+      if (!silent)
+        document.getElementById('live-grid').innerHTML =
+          '<p class="col-span-3 text-center font-body-sm text-on-surface-variant py-md">Could not load fixtures.</p>';
+    }
   }
 
+  // Poll every 60 seconds
+  setInterval(() => loadLiveFixtures(true), 60000);
+
+  function setLiveFilter(f) {
+    activeLiveFilter = f;
+    document.querySelectorAll('.lf-btn').forEach(b => {
+      const on = b.dataset.lf === f;
+      b.classList.toggle('bg-primary',              on);
+      b.classList.toggle('text-on-primary',         on);
+      b.classList.toggle('bg-surface-container',    !on);
+      b.classList.toggle('text-on-surface-variant', !on);
+    });
+    // "All" = live + upcoming only (never completed)
+    const filtered = f === 'all'
+      ? allLiveMatches.filter(m => m.status !== 'completed')
+      : allLiveMatches.filter(m => m.status === f);
+    renderLive(filtered);
+  }
+
+  function renderLive(fixtures) {
+    const grid  = document.getElementById('live-grid');
+    const empty = document.getElementById('live-empty');
+    if (!fixtures.length) {
+      grid.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    grid.innerHTML = fixtures.map((f, i) => {
+      const isLive     = f.status === 'live';
+      const isCompleted= f.status === 'completed';
+      const showScore  = isLive || isCompleted;
+      const borderCls  = isLive ? 'border-error/40' : 'border-surface-variant';
+
+      // Status badge
+      let badge = '';
+      if (isLive) {
+        const clock = f.clock ? `· ${f.clock}` : '';
+        badge = `<span class="flex items-center gap-xs font-label-caps text-[10px] text-error">
+                   <span class="w-1.5 h-1.5 rounded-full bg-error inline-block animate-pulse"></span>
+                   LIVE ${clock}
+                 </span>`;
+      } else if (isCompleted) {
+        badge = `<span class="flex items-center gap-xs font-label-caps text-[10px] text-secondary">
+                   <span class="material-symbols-outlined text-[11px]" style="font-variation-settings:'FILL' 1">check_circle</span>FT
+                 </span>`;
+      } else {
+        badge = `<span class="font-label-caps text-[10px] text-primary flex items-center gap-xs">
+                   <span class="material-symbols-outlined text-[11px]">schedule</span>${f.date || ''}
+                 </span>`;
+      }
+
+      // Score or "vs"
+      const centre = showScore
+        ? `<div class="flex items-center gap-xs shrink-0 px-xs">
+             <span class="font-bold text-[18px] leading-none ${isLive?'text-error':'text-on-surface'}">${f.home_score}</span>
+             <span class="text-secondary font-bold text-sm">-</span>
+             <span class="font-bold text-[18px] leading-none ${isLive?'text-error':'text-on-surface'}">${f.away_score}</span>
+           </div>`
+        : `<span class="font-label-caps text-[11px] text-secondary px-xs shrink-0">vs</span>`;
+
+      return `
+        <div style="animation-delay:${i*50}ms"
+             class="tonal-layer-1 rounded-xl border ${borderCls} p-sm flex flex-col gap-sm card-lift anim-scale-in${isLive?' shadow-md':''}">
+          <div class="flex items-center justify-between">
+            <span class="font-label-caps text-[10px] text-secondary">${f.stage || 'Group Stage'}</span>
+            ${badge}
+          </div>
+          <div class="flex items-center justify-between gap-xs">
+            <div class="flex items-center gap-xs flex-1 min-w-0">
+              <img src="https://flagcdn.com/w40/${f.home_code}.png" class="w-7 h-5 object-cover rounded-sm border border-surface-variant shrink-0" onerror="this.style.display='none'"/>
+              <span class="font-bold text-body-sm truncate ${isLive?'text-on-surface':''}">${f.home}</span>
+            </div>
+            ${centre}
+            <div class="flex items-center gap-xs flex-1 min-w-0 justify-end">
+              <span class="font-bold text-body-sm truncate text-right ${isLive?'text-on-surface':''}">${f.away}</span>
+              <img src="https://flagcdn.com/w40/${f.away_code}.png" class="w-7 h-5 object-cover rounded-sm border border-surface-variant shrink-0" onerror="this.style.display='none'"/>
+            </div>
+          </div>
+          <div class="flex justify-end pt-xs border-t border-surface-variant">
+            <button onclick="goPredict('${f.home.replace(/'/g,"\\'")}','${f.away.replace(/'/g,"\\'")}','${f.date||''}')"
+                    class="bg-primary text-on-primary px-sm py-xs rounded-lg font-label-caps text-[10px]
+                           hover:opacity-90 active:scale-95 transition-all flex items-center gap-xs">
+              <span class="material-symbols-outlined text-[11px]">analytics</span>Predict
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Group Fixtures ────────────────────────────────────────────────────────
+  let allGroupData  = {};
+
+  async function loadGroupFixtures() {
+    try {
+      const res  = await fetch('/api/group-fixtures');
+      const data = await res.json();
+      allGroupData = data.groups || {};
+      const badge = document.getElementById('gf-source-badge');
+      badge.classList.remove('hidden');
+      badge.style.display = 'flex';
+      showGroupFixtures('A');
+    } catch(e) {
+      document.getElementById('gf-container').innerHTML =
+        '<p class="text-center py-lg font-body-sm text-on-surface-variant">Could not load fixtures.</p>';
+    }
+  }
+
+  function showGroupFixtures(group) {
+    document.querySelectorAll('.gf-tab').forEach(b => {
+      const on = b.dataset.gf === group;
+      b.classList.toggle('bg-primary',              on);
+      b.classList.toggle('text-on-primary',         on);
+      b.classList.toggle('bg-surface-container',    !on);
+      b.classList.toggle('text-on-surface-variant', !on);
+    });
+
+    const matches = allGroupData[group] || [];
+    const byMD = {};
+    matches.forEach(m => { if (!byMD[m.matchday]) byMD[m.matchday]=[]; byMD[m.matchday].push(m); });
+
+    let html = '';
+    [1,2,3].forEach(md => {
+      const mds = byMD[md] || [];
+      if (!mds.length) return;
+      html += `<div class="mb-md">
+        <div class="font-label-caps text-label-caps text-secondary mb-sm flex items-center gap-xs">
+          <span class="material-symbols-outlined text-[14px]">calendar_today</span>Matchday ${md}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-gutter">`;
+
+      mds.forEach((m, i) => {
+        const played = m.status === 'completed', live = m.status === 'live';
+        const hWon   = played && m.winner === m.home;
+        const aWon   = played && m.winner === m.away;
+
+        const scoreBlock = played || live
+          ? `<div class="flex items-center gap-xs shrink-0 mx-sm">
+               <span class="font-bold text-[20px] leading-none ${hWon?'text-primary':'text-on-surface'}">${m.home_score}</span>
+               <span class="text-on-surface-variant font-bold text-sm">-</span>
+               <span class="font-bold text-[20px] leading-none ${aWon?'text-primary':'text-on-surface'}">${m.away_score}</span>
+             </div>`
+          : `<div class="flex items-center gap-xs shrink-0 mx-sm">
+               <span class="font-label-caps text-[10px] text-secondary whitespace-nowrap">${m.date}</span>
+             </div>`;
+
+        const footerLeft = played
+          ? `<span class="font-label-caps text-[10px] text-secondary flex items-center gap-xs">
+               <span class="material-symbols-outlined text-[11px]" style="font-variation-settings:'FILL' 1">check_circle</span>Full Time
+             </span>`
+          : live
+          ? `<span class="font-label-caps text-[10px] text-error flex items-center gap-xs animate-pulse">
+               <span class="w-1.5 h-1.5 rounded-full bg-error inline-block"></span>LIVE
+             </span>`
+          : `<span class="font-label-caps text-[10px] text-secondary">${m.date}</span>`;
+
+        html += `
+          <div class="tonal-layer-1 rounded-xl border ${played?'border-surface-container-high':'border-surface-variant'} overflow-hidden card-lift anim-scale-in" style="animation-delay:${i*60}ms">
+            <div class="flex items-center p-sm gap-xs">
+              <div class="flex items-center gap-xs flex-1 min-w-0">
+                <img src="https://flagcdn.com/w40/${m.home_code}.png" class="w-7 h-5 object-cover rounded-sm border border-surface-variant shrink-0" onerror="this.style.display='none'"/>
+                <span class="text-body-sm ${hWon?'font-bold text-primary':played?'text-on-surface-variant font-semibold':'font-bold text-on-surface'} truncate">${m.home}</span>
+              </div>
+              ${scoreBlock}
+              <div class="flex items-center gap-xs flex-1 min-w-0 justify-end">
+                <span class="text-body-sm ${aWon?'font-bold text-primary':played?'text-on-surface-variant font-semibold':'font-bold text-on-surface'} truncate text-right">${m.away}</span>
+                <img src="https://flagcdn.com/w40/${m.away_code}.png" class="w-7 h-5 object-cover rounded-sm border border-surface-variant shrink-0" onerror="this.style.display='none'"/>
+              </div>
+            </div>
+            <div class="flex items-center justify-between px-sm pb-sm">
+              ${footerLeft}
+              <button onclick="goPredict('${m.home.replace(/'/g,"\\'")}','${m.away.replace(/'/g,"\\'")}','${m.date}')"
+                      class="bg-primary text-on-primary px-sm py-xs rounded-lg font-label-caps text-[10px]
+                             hover:opacity-90 active:scale-95 transition-all flex items-center gap-xs">
+                <span class="material-symbols-outlined text-[11px]">analytics</span>Predict
+              </button>
+            </div>
+          </div>`;
+      });
+      html += '</div></div>';
+    });
+
+    const c = document.getElementById('gf-container');
+    c.style.opacity = '0';
+    setTimeout(() => { c.innerHTML = html; c.style.opacity = '1'; c.style.transition = 'opacity .18s ease'; }, 150);
+  }
+
+  // ── LEGACY (kept for goPredict used by old code) ───────────────────────────
+  async function loadFixtures() { /* replaced by loadGroupFixtures */ }
   function renderFixtures(fixtures, animate = true) {
     const grid  = document.getElementById('fixtures-grid');
     const empty = document.getElementById('no-fixtures');
@@ -538,7 +767,8 @@
 
   // Init
   loadTournament();
-  loadFixtures();
+  loadLiveFixtures();
+  loadGroupFixtures();
   loadGroupStandings();
 </script>
 {% endblock %}

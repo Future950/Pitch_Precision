@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Pitch Precision | Player Stats{% endblock %}
+
+{% block head %}
+<style>
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-slide-up { animation: slideUp .4s ease-out both; }
+
+  /* Gold / Silver / Bronze medals */
+  .medal-1 { background: linear-gradient(135deg,#f6d365,#fda085); color:#fff; }
+  .medal-2 { background: linear-gradient(135deg,#c0c0c0,#a0a0a0); color:#fff; }
+  .medal-3 { background: linear-gradient(135deg,#cd7f32,#a0522d); color:#fff; }
+  .medal-n { background: #edeeef; color: #4f6073; }
+
+  /* Stat tab active */
+  .stat-tab        { transition: background .15s, color .15s, transform .1s; }
+  .stat-tab:active { transform: scale(0.93); }
+  .stat-tab.active { background:#006d37; color:#fff; }
+
+  /* Player row hover lift */
+  .player-row {
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .player-row:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px -4px rgba(0,109,55,.10);
+  }
+
+  /* Stat bar fill animation */
+  .stat-bar-fill { transition: width .6s cubic-bezier(.4,0,.2,1); }
+
+  /* Card grid cross-fade */
+  #player-grid { transition: opacity .18s ease; }
+  #player-grid.fading { opacity: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="mb-lg anim-slide-up">
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-md">
+    <div>
+      <div class="flex items-center gap-sm mb-xs">
+        <span class="flex items-center gap-xs bg-primary-container text-on-primary-container px-sm py-1 rounded-full font-label-caps text-label-caps">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block animate-pulse"></span>
+          LIVE 2026
+        </span>
+        <span class="text-secondary font-label-caps text-label-caps uppercase tracking-widest">Tournament Statistics</span>
+      </div>
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Player Stats</h1>
+      <p class="text-on-surface-variant font-body-sm text-body-sm max-w-lg">
+        Live goals, assists, cards, saves and more — updated from ESPN after every match.
+      </p>
+    </div>
+    <div id="last-updated" class="font-label-caps text-label-caps text-secondary shrink-0"></div>
+  </div>
+</section>
+
+<!-- Category Tabs -->
+<div class="flex flex-wrap gap-xs mb-lg anim-slide-up" style="animation-delay:.1s" id="stat-tabs">
+  <!-- filled by JS -->
+</div>
+
+<!-- Loading skeleton -->
+<div id="loading-state" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-gutter">
+  <div class="skeleton rounded-xl h-24"></div>
+  <div class="skeleton rounded-xl h-24"></div>
+  <div class="skeleton rounded-xl h-24"></div>
+  <div class="skeleton rounded-xl h-24"></div>
+  <div class="skeleton rounded-xl h-24"></div>
+  <div class="skeleton rounded-xl h-24"></div>
+</div>
+
+<!-- Error state -->
+<div id="error-state" class="hidden tonal-layer-1 rounded-xl border border-error p-md text-center">
+  <span class="material-symbols-outlined text-error" style="font-size:40px">wifi_off</span>
+  <p class="font-body-sm text-body-sm text-on-surface-variant mt-sm">Could not load live player stats. Check your connection and try again.</p>
+  <button onclick="loadStats()" class="mt-md bg-primary text-on-primary px-md py-sm rounded-lg font-label-caps text-label-caps hover:opacity-90 transition-all">Retry</button>
+</div>
+
+<!-- Player grid -->
+<div id="player-grid" class="hidden">
+  <!-- Top 3 podium -->
+  <div class="grid grid-cols-3 gap-gutter mb-gutter" id="podium"></div>
+
+  <!-- Ranked list (4th onwards) -->
+  <div class="tonal-layer-1 rounded-xl border border-surface-variant overflow-hidden">
+    <div class="bg-secondary text-on-secondary px-md py-sm grid grid-cols-12 font-label-caps text-label-caps">
+      <span class="col-span-1 text-center">#</span>
+      <span class="col-span-6 sm:col-span-5">Player</span>
+      <span class="col-span-3 sm:col-span-4 hidden sm:block">Progress</span>
+      <span class="col-span-5 sm:col-span-2 text-right">Stat</span>
+    </div>
+    <div id="player-list" class="divide-y divide-surface-variant"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let allStats   = {};
+  let activeTab  = '';
+
+  const MEDAL_CLASS = ['medal-1','medal-2','medal-3'];
+
+  async function loadStats() {
+    document.getElementById('loading-state').classList.remove('hidden');
+    document.getElementById('error-state').classList.add('hidden');
+    document.getElementById('player-grid').classList.add('hidden');
+
+    try {
+      const res  = await fetch('/api/player-stats');
+      if (!res.ok) throw new Error('API error');
+      allStats = await res.json();
+      document.getElementById('last-updated').textContent =
+        'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+      buildTabs();
+      const firstTab = Object.keys(allStats)[0];
+      showTab(firstTab);
+    } catch (e) {
+      document.getElementById('loading-state').classList.add('hidden');
+      document.getElementById('error-state').classList.remove('hidden');
+    }
+  }
+
+  function buildTabs() {
+    const container = document.getElementById('stat-tabs');
+    container.innerHTML = Object.entries(allStats).map(([label, cat]) => `
+      <button onclick="showTab('${label}')" data-tab="${label}"
+              class="stat-tab px-sm py-xs rounded-lg font-label-caps text-label-caps
+                     bg-surface-container text-on-surface-variant hover:bg-surface-container-high
+                     flex items-center gap-xs">
+        <span class="material-symbols-outlined text-[14px] ${cat.color}">${cat.icon}</span>
+        ${label}
+      </button>
+    `).join('');
+  }
+
+  function showTab(label) {
+    if (activeTab === label) return;
+    activeTab = label;
+
+    // Update tab styles
+    document.querySelectorAll('.stat-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === label);
+      b.classList.toggle('bg-surface-container', b.dataset.tab !== label);
+      b.classList.toggle('text-on-surface-variant', b.dataset.tab !== label);
+    });
+
+    const grid = document.getElementById('player-grid');
+    const isFirst = grid.classList.contains('hidden');
+
+    const render = () => {
+      renderPlayers(label);
+      document.getElementById('loading-state').classList.add('hidden');
+      grid.classList.remove('hidden', 'fading');
+    };
+
+    if (isFirst) {
+      render();
+    } else {
+      grid.classList.add('fading');
+      setTimeout(render, 180);
+    }
+  }
+
+  function renderPlayers(label) {
+    const cat     = allStats[label];
+    const entries = cat.entries;
+    const top3    = entries.slice(0, 3);
+    const rest    = entries.slice(3);
+
+    // Podium: 2nd | 1st | 3rd layout
+    const podiumOrder = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
+    const podiumPos   = top3.length >= 3 ? [2, 1, 3]                   : [1, 2, 3];
+    const podiumH     = ['h-36', 'h-44', 'h-32'];
+
+    document.getElementById('podium').innerHTML = podiumOrder.map((p, i) => {
+      if (!p) return '<div></div>';
+      const medalClass = MEDAL_CLASS[podiumPos[i] - 1] || 'medal-n';
+      return `
+        <div class="player-row tonal-layer-1 rounded-xl border border-surface-variant p-md
+                    flex flex-col items-center text-center gap-sm ${podiumH[i]} justify-end"
+             style="animation: slideUp .4s ease-out ${i * 80}ms both">
+          <div class="relative">
+            <img src="${p.headshot}" alt="${p.player}"
+                 class="w-16 h-16 rounded-full object-cover border-2 border-surface-variant bg-surface-container"
+                 onerror="this.src='https://ui-avatars.com/api/?name='+encodeURIComponent('${p.player}')+'&background=006d37&color=ffffff&size=128&bold=true&rounded=true';this.onerror=null"/>
+            <span class="absolute -bottom-1 -right-1 ${medalClass} rounded-full w-6 h-6
+                         flex items-center justify-center font-bold" style="font-size:11px">
+              ${podiumPos[i]}
+            </span>
+          </div>
+          <div class="min-w-0 w-full">
+            <div class="font-bold text-on-surface text-body-sm truncate">${p.player}</div>
+            <div class="flex items-center justify-center gap-xs mt-xs">
+              <img src="https://flagcdn.com/w40/${p.code}.png" class="w-5 h-3 object-cover rounded-sm"
+                   onerror="this.style.display='none'"/>
+              <span class="font-label-caps text-[10px] text-secondary">${p.country}</span>
+            </div>
+          </div>
+          <div class="font-data-display text-data-display ${cat.color}">${p.value}</div>
+        </div>`;
+    }).join('');
+
+    // List rows (4th+)
+    document.getElementById('player-list').innerHTML = rest.map((p, i) => `
+      <div class="player-row px-md py-sm grid grid-cols-12 items-center gap-sm
+                  hover:bg-surface-container-low"
+           style="animation: slideUp .35s ease-out ${(i + 3) * 40}ms both">
+        <div class="col-span-1 text-center">
+          <span class="font-label-caps text-label-caps text-secondary">${p.rank}</span>
+        </div>
+        <div class="col-span-6 sm:col-span-5 flex items-center gap-sm min-w-0">
+          <img src="${p.headshot}" alt="${p.player}"
+               class="w-9 h-9 rounded-full object-cover border border-surface-variant bg-surface-container shrink-0"
+               onerror="this.src='https://ui-avatars.com/api/?name='+encodeURIComponent('${p.player}')+'&background=006d37&color=ffffff&size=64&bold=true&rounded=true';this.onerror=null"/>
+          <div class="min-w-0">
+            <div class="font-bold text-body-sm text-on-surface truncate">${p.player}</div>
+            <div class="flex items-center gap-xs mt-0.5">
+              <img src="https://flagcdn.com/w40/${p.code}.png" class="w-4 h-3 object-cover rounded-sm"
+                   onerror="this.style.display='none'"/>
+              <span class="font-label-caps text-[10px] text-secondary truncate">${p.country}</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-span-4 hidden sm:block">
+          <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
+            <div class="stat-bar-fill h-full bg-primary rounded-full" style="width:0%"
+                 data-pct="${p.pct}"></div>
+          </div>
+        </div>
+        <div class="col-span-5 sm:col-span-2 text-right">
+          <span class="font-bold text-body-sm ${cat.color}">${p.value}</span>
+        </div>
+      </div>`).join('');
+
+    // Animate bars on next frame
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.stat-bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.pct + '%';
+      });
+    });
+  }
+
+  loadStats();
+</script>
+{% endblock %}

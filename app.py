@@ -21,8 +21,8 @@ sys.path.insert(0, str(BASE_DIR))
 from features import (
     load_results, load_rankings, compute_elo_history,
     get_team_form, get_goals_avg, get_draw_rate,
-    get_fifa_rank_points, get_head_to_head, get_elo_rating,
-    get_squad_value_log, WC2026_SQUAD_VALUES,
+    get_fifa_rank_points, get_head_to_head, get_h2h_avg_goals,
+    get_elo_rating, get_squad_value_log, WC2026_SQUAD_VALUES,
 )
 from outcome_model import predict_match_outcome
 from goals_model import predict_match_goals
@@ -38,8 +38,16 @@ TODAY = datetime.now()
 print("Loading results and rankings data...")
 results_df  = load_results(DATA_DIR / "results.csv")
 rankings_df = load_rankings(DATA_DIR / "fifa_ranking.csv")
-print("Computing ELO history (may take ~30s)...")
-elo_history = compute_elo_history(results_df)
+
+_elo_cache = OUT_DIR / "elo_history.pkl"
+if _elo_cache.exists():
+    print("Loading cached ELO history...")
+    elo_history = joblib.load(_elo_cache)
+else:
+    print("Computing ELO history (first run, ~30s — will be cached)...")
+    elo_history = compute_elo_history(results_df)
+    joblib.dump(elo_history, _elo_cache)
+    print("ELO history cached to disk.")
 
 # ── Load trained models ───────────────────────────────────────────────────────
 outcome_model    = joblib.load(OUT_DIR / "outcome_model.pkl")
@@ -204,6 +212,7 @@ def make_features(home, away, date=REFERENCE_DATE, neutral=1):
     hsv         = get_squad_value_log(rankings_df, home, date)
     asv         = get_squad_value_log(rankings_df, away, date)
     h2h         = get_head_to_head(results_df, home, away, date)
+    h2h_goals   = get_h2h_avg_goals(results_df, home, away, date)
     return {
         "home_form": hf, "away_form": af,
         "home_goals_scored_avg": hgs, "home_goals_conceded_avg": hgc,
@@ -215,7 +224,10 @@ def make_features(home, away, date=REFERENCE_DATE, neutral=1):
         "home_elo": helo, "away_elo": aelo, "elo_diff": helo - aelo,
         "home_squad_value_log": hsv, "away_squad_value_log": asv,
         "squad_value_log_diff": hsv - asv,
+        "home_attack_vs_away_def": hgs / max(agc, 0.5),
+        "away_attack_vs_home_def": ags / max(hgc, 0.5),
         "h2h_home_winrate": h2h,
+        "h2h_avg_goals":    h2h_goals,
         "is_neutral": neutral,
     }
 
@@ -352,27 +364,178 @@ def fetch_espn_fixtures():
             away_c = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
             home   = ESPN_NAME_MAP.get(home_c.get("team", {}).get("displayName", ""), home_c.get("team", {}).get("displayName", ""))
             away   = ESPN_NAME_MAP.get(away_c.get("team", {}).get("displayName", ""), away_c.get("team", {}).get("displayName", ""))
-            stype  = comp.get("status", {}).get("type", {}).get("name", "")
-            if "FINAL" in stype:
+            st     = comp.get("status", {}).get("type", {})
+            stype  = st.get("name", "")
+            period = comp.get("status", {}).get("period", 0) or 0
+            # completed: full-time, final, or completed flag
+            if st.get("completed") or "FINAL" in stype or "FULL_TIME" in stype:
                 status = "completed"
-            elif "IN_PROGRESS" in stype:
+            # live: any in-play state (1st half, 2nd half, HT, ET, pens...)
+            elif period > 0 or any(x in stype for x in (
+                "IN_PROGRESS", "HALFTIME", "FIRST_HALF", "SECOND_HALF",
+                "EXTRA_TIME", "OVERTIME", "PENALTY", "PAUSE"
+            )):
                 status = "live"
             else:
                 status = "upcoming"
+
+            home_score = home_c.get("score", "") if status in ("live", "completed") else ""
+            away_score = away_c.get("score", "") if status in ("live", "completed") else ""
+            clock      = comp.get("status", {}).get("displayClock", "") if status == "live" else ""
+
             notes = comp.get("notes", [])
             stage = notes[0].get("headline", "FIFA World Cup") if notes else "FIFA World Cup"
             fixtures.append({
-                "id":       ev.get("id", ""),
-                "stage":    stage,
-                "home":     home,
-                "away":     away,
-                "date":     ev.get("date", "")[:10],
-                "status":   status,
-                "home_code": COUNTRY_CODES.get(home, "un"),
-                "away_code": COUNTRY_CODES.get(away, "un"),
+                "id":         ev.get("id", ""),
+                "stage":      stage,
+                "home":       home,
+                "away":       away,
+                "home_score": str(home_score),
+                "away_score": str(away_score),
+                "clock":      clock,
+                "date":       ev.get("date", "")[:10],
+                "status":     status,
+                "home_code":  COUNTRY_CODES.get(home, "un"),
+                "away_code":  COUNTRY_CODES.get(away, "un"),
             })
         return fixtures or None
     except Exception:
+        return None
+
+
+# citizenship string → ISO flag code (ESPN uses full country names)
+_CITIZENSHIP_CODES = {
+    **COUNTRY_CODES,
+    "United States": "us", "USA": "us",
+    "South Korea": "kr", "Korea Republic": "kr",
+    "Ivory Coast": "ci", "Cote d'Ivoire": "ci",
+    "DR Congo": "cd", "Congo DR": "cd",
+    "Bosnia and Herzegovina": "ba",
+    "Cape Verde": "cv", "Cabo Verde": "cv",
+    "Czech Republic": "cz", "Czechia": "cz",
+    "Türkiye": "tr", "Turkey": "tr",
+    "Curacao": "cw", "Curaçao": "cw",
+    "Norway": "no", "Sweden": "se", "Austria": "at",
+    "Colombia": "co", "Algeria": "dz", "Jordan": "jo",
+    "Uzbekistan": "uz", "Ghana": "gh", "Panama": "pa",
+    "Scotland": "gb-sct", "England": "gb-eng",
+    "Australia": "au", "New Zealand": "nz",
+}
+
+_STAT_LABELS = {
+    "goalsLeaders":   ("Goals",            "sports_score",   "text-primary"),
+    "assistsLeaders": ("Assists",          "gesture",        "text-tertiary"),
+    "shotsOnTarget":  ("Shots on Target",  "ads_click",      "text-tertiary"),
+    "totalShots":     ("Total Shots",      "target",         "text-secondary"),
+    "yellowCards":    ("Yellow Cards",     "square",         "text-yellow-500"),
+    "redCards":       ("Red Cards",        "square",         "text-error"),
+    "saves":          ("Saves (GK)",       "shield",         "text-primary"),
+    "accuratePasses": ("Accurate Passes",  "multiple_stop",  "text-secondary"),
+}
+
+_player_cache: dict = {"data": None, "ts": 0.0}
+_img_cache:    dict = {}   # player_name → best available image URL
+
+def _resolve_player_image(name: str, espn_url: str) -> str:
+    """
+    Return the best available headshot URL for a player.
+    Priority: ESPN CDN → TheSportsDB → ui-avatars initials.
+    """
+    if espn_url:
+        return espn_url
+    if name in _img_cache:
+        return _img_cache[name]
+    try:
+        import urllib.parse as _up
+        search = (f"https://www.thesportsdb.com/api/v1/json/3/searchplayers.php"
+                  f"?p={_up.quote(name)}")
+        r = requests.get(search, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        players = r.json().get("player") or []
+        img = ""
+        if players:
+            img = players[0].get("strThumb") or players[0].get("strCutout") or ""
+        if not img:
+            img = (f"https://ui-avatars.com/api/?name={_up.quote(name)}"
+                   f"&background=006d37&color=ffffff&size=128&bold=true&rounded=true")
+        _img_cache[name] = img
+        return img
+    except Exception:
+        return (f"https://ui-avatars.com/api/?name={name[:20].replace(' ', '+')}"
+                f"&background=006d37&color=ffffff&size=128&bold=true&rounded=true")
+
+
+def fetch_player_stats():
+    """
+    Fetch live WC 2026 player stats from ESPN's leaders API.
+    Cached for 5 minutes. Returns dict: category_label -> list of player dicts.
+    """
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    now = time.time()
+    if _player_cache["data"] and now - _player_cache["ts"] < 300:
+        return _player_cache["data"]
+
+    try:
+        url = ("https://sports.core.api.espn.com/v2/sports/soccer/leagues"
+               "/fifa.world/seasons/2026/types/1/leaders")
+        resp = requests.get(url, timeout=8)
+        if resp.status_code != 200:
+            return None
+        cats = resp.json().get("categories", [])
+
+        def _fetch_athlete(ref):
+            try:
+                r = requests.get(ref, timeout=5)
+                a = r.json()
+                name    = a.get("displayName", "?")
+                pos     = a.get("position", {}).get("abbreviation", "")
+                country = a.get("citizenship", "")
+                espn_hs = a.get("headshot", {}).get("href", "")
+                headshot = _resolve_player_image(name, espn_hs)
+                return {
+                    "name":     name,
+                    "headshot": headshot,
+                    "country":  country,
+                    "code":     _CITIZENSHIP_CODES.get(country, "un"),
+                    "position": pos,
+                }
+            except Exception:
+                return {"name": "?", "headshot": "", "country": "", "code": "un", "position": ""}
+
+        result = {}
+        for cat in cats:
+            cat_key = cat.get("name", "")
+            if cat_key not in _STAT_LABELS:
+                continue
+            label, icon, color = _STAT_LABELS[cat_key]
+            leaders = cat.get("leaders", [])[:10]
+            refs    = [l.get("athlete", {}).get("$ref", "") for l in leaders]
+            values  = [l.get("value", 0) for l in leaders]
+            with ThreadPoolExecutor(max_workers=6) as ex:
+                athletes = list(ex.map(_fetch_athlete, refs))
+            max_val = max((v for v in values), default=1) or 1
+            entries = [
+                {
+                    "rank":    i + 1,
+                    "player":  ath["name"],
+                    "headshot":ath["headshot"],
+                    "country": ath["country"],
+                    "code":    ath["code"],
+                    "position":ath["position"],
+                    "value":   int(v) if float(v) == int(float(v)) else round(float(v), 1),
+                    "pct":     round(_safe(v) / max_val * 100, 1),
+                }
+                for i, (v, ath) in enumerate(zip(values, athletes))
+            ]
+            result[label] = {"icon": icon, "color": color, "entries": entries}
+
+        if result:
+            _player_cache["data"] = result
+            _player_cache["ts"]   = now
+        return result or None
+    except Exception as e:
+        print(f"Player stats error: {e}")
         return None
 
 
@@ -402,7 +565,13 @@ def fetch_espn_standings():
         for g in groups:
             raw_abbrev = g.get("abbreviation", g.get("name", "?"))
             letter = raw_abbrev.split()[-1]          # "Group A" → "A"
-            entries = g.get("standings", {}).get("entries", [])
+            raw_entries = g.get("standings", {}).get("entries", [])
+            # ESPN entries arrive in arbitrary order — sort by their own rank stat
+            def _entry_rank(e):
+                s = {x["name"]: x.get("value", 99) for x in e.get("stats", [])}
+                return int(_safe(s.get("rank", 99), 99))
+            entries = sorted(raw_entries, key=_entry_rank)
+
             teams = []
             for entry in entries:
                 raw_name = entry.get("team", {}).get("displayName", "")
@@ -483,6 +652,293 @@ def api_fixtures():
 @app.route("/api/teams")
 def api_teams():
     return jsonify(sorted(ALL_TEAMS))
+
+
+@app.route("/players")
+def players():
+    return render_template("players.html")
+
+
+@app.route("/bracket")
+def bracket():
+    return render_template("bracket.html")
+
+
+# ── Bracket cache ─────────────────────────────────────────────────────────────
+_bracket_cache: dict = {"data": None, "ts": 0.0}
+
+ROUND_ORDER = ["Round of 32", "Round of 16", "Quarter-Finals",
+               "Semi-Finals", "Third Place", "Final"]
+
+
+def _infer_round(home: str, away: str, date: str) -> str:
+    """Infer knockout round from ESPN placeholder team names."""
+    combined = home + away
+    if "Semifinal" in combined:
+        return "Third Place" if "Loser" in combined else "Final"
+    if "Quarterfinal" in combined:
+        return "Semi-Finals"
+    if "Round of 16" in combined:
+        return "Quarter-Finals"
+    if "Round of 32" in combined:
+        return "Round of 16"
+    return "Round of 32"
+
+
+def _clean_team(name: str) -> str:
+    """Normalize ESPN team names and shorten TBD placeholders."""
+    name = ESPN_NAME_MAP.get(name, name)
+    for pattern, short in [
+        ("Third Place Group ", "3rd · Grp "),
+        ("Group ",            "Grp "),
+        (" 2nd Place",        " (2nd)"),
+        (" Winner",           " ✓"),
+        (" Loser",            " (3rd)"),
+        ("Round of 32 ",      "R32 #"),
+        ("Round of 16 ",      "R16 #"),
+        ("Quarterfinal ",     "QF"),
+        ("Semifinal ",        "SF"),
+    ]:
+        name = name.replace(pattern, short)
+    return name
+
+
+def fetch_bracket():
+    """
+    Fetch full knockout bracket from ESPN (R32 → Final).
+    Returns dict with 'rounds' list, each containing 'matches'.
+    Cached 5 minutes.
+    """
+    import time as _time
+    now = _time.time()
+    if _bracket_cache["data"] and now - _bracket_cache["ts"] < 300:
+        return _bracket_cache["data"]
+
+    try:
+        from datetime import datetime as _dt, timedelta as _td
+
+        # ── Build substitution map from live standings ──────────────
+        # Maps ESPN placeholder strings → real qualified team names.
+        subst = {}
+        try:
+            stnd = fetch_espn_standings()
+            if stnd:
+                for letter, teams in stnd.items():
+                    g = f"Group {letter}"
+                    if teams:
+                        subst[f"{g} Winner"]    = teams[0]["team"]
+                    if len(teams) > 1:
+                        subst[f"{g} 2nd Place"] = teams[1]["team"]
+                    if len(teams) > 2:
+                        subst[f"{g} 3rd Place"] = teams[2]["team"]
+        except Exception as se:
+            print(f"Standings sub error: {se}")
+
+        def _resolve(raw: str):
+            """Return (display_name, country_code, is_tbd)."""
+            # Real team name already (no placeholder keywords)
+            if not any(k in raw for k in ["Winner", "Place", "Loser", "Round of", "Quarterfinal", "Semifinal"]):
+                name = ESPN_NAME_MAP.get(raw, raw)
+                return name, COUNTRY_CODES.get(name, "un"), False
+            # Known from standings substitution
+            if raw in subst:
+                name = subst[raw]
+                return name, COUNTRY_CODES.get(name, "un"), False
+            # Still unknown — clean and mark TBD
+            return _clean_team(ESPN_NAME_MAP.get(raw, raw)), "un", True
+
+        all_matches = []
+
+        for i in range(22):           # Jul 1 – Jul 22
+            d = (_dt(2026, 7, 1) + _td(days=i)).strftime("%Y%m%d")
+            try:
+                r = requests.get(
+                    "https://site.api.espn.com/apis/site/v2/sports/soccer"
+                    f"/fifa.world/scoreboard?dates={d}",
+                    timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+                for ev in r.json().get("events", []):
+                    comp  = ev["competitions"][0]
+                    comps = comp["competitors"]
+                    h_c   = comps[0] if comps else {}
+                    a_c   = comps[1] if len(comps) > 1 else {}
+                    raw_h = h_c.get("team", {}).get("displayName", "TBD")
+                    raw_a = a_c.get("team", {}).get("displayName", "TBD")
+                    hs    = h_c.get("score", "")
+                    as_   = a_c.get("score", "")
+                    st    = comp["status"]["type"]["name"]
+                    date  = ev.get("date", "")[:10]
+
+                    home, home_code, h_tbd = _resolve(raw_h)
+                    away, away_code, a_tbd = _resolve(raw_a)
+
+                    winner = ""
+                    if st == "STATUS_FINAL":
+                        try:
+                            winner = home if int(hs) > int(as_) else (
+                                away if int(as_) > int(hs) else "")
+                        except (ValueError, TypeError):
+                            pass
+                    if not winner and h_c.get("winner", False):
+                        winner = home
+                    elif not winner and a_c.get("winner", False):
+                        winner = away
+
+                    all_matches.append({
+                        "id":         ev.get("id", ""),
+                        "date":       date,
+                        "round":      _infer_round(raw_h, raw_a, date),
+                        "home":       home,
+                        "home_code":  home_code,
+                        "home_score": str(hs),
+                        "away":       away,
+                        "away_code":  away_code,
+                        "away_score": str(as_),
+                        "status":     st,
+                        "winner":     winner,
+                        "is_tbd":     h_tbd or a_tbd,
+                    })
+            except Exception:
+                pass
+
+        by_round = {r: [] for r in ROUND_ORDER}
+        for m in all_matches:
+            if m["round"] in by_round:
+                by_round[m["round"]].append(m)
+
+        # Sort each round's matches by date
+        for lst in by_round.values():
+            lst.sort(key=lambda x: x["date"])
+
+        rounds = [{"name": r, "matches": by_round[r]}
+                  for r in ROUND_ORDER if by_round[r]]
+        result = {"rounds": rounds}
+        _bracket_cache["data"]  = result
+        _bracket_cache["ts"]    = now
+        return result
+    except Exception as e:
+        print(f"Bracket fetch error: {e}")
+        return None
+
+
+@app.route("/api/bracket")
+def api_bracket():
+    data = fetch_bracket()
+    if not data:
+        return jsonify({"error": "Could not fetch bracket"}), 503
+    return jsonify(data)
+
+
+@app.route("/api/player-stats")
+def api_player_stats():
+    data = fetch_player_stats()
+    if not data:
+        return jsonify({"error": "Could not fetch player stats"}), 503
+    return jsonify(data)
+
+
+_group_fixtures_cache: dict = {"data": None, "ts": 0.0}
+
+# Reverse lookup: team name → group letter
+_TEAM_TO_GROUP = {
+    t: letter
+    for letter, teams in WC_2026_GROUPS.items()
+    for t in teams
+}
+
+
+def fetch_all_group_fixtures():
+    """
+    Fetch all 72 group stage matches from ESPN (Jun 11–28) with live scores.
+    Organised by group letter A–L, sorted by date, with matchday assigned.
+    Cached 5 minutes.
+    """
+    import time as _t
+    from datetime import datetime as _dt, timedelta as _td
+    now = _t.time()
+    if _group_fixtures_cache["data"] and now - _group_fixtures_cache["ts"] < 300:
+        return _group_fixtures_cache["data"]
+
+    all_matches = []
+    for i in range(18):          # Jun 11 – Jun 28
+        d = (_dt(2026, 6, 11) + _td(days=i)).strftime("%Y%m%d")
+        try:
+            r = requests.get(
+                "https://site.api.espn.com/apis/site/v2/sports/soccer"
+                f"/fifa.world/scoreboard?dates={d}",
+                timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+            for ev in r.json().get("events", []):
+                comp  = ev["competitions"][0]
+                comps = comp["competitors"]
+                h_c   = comps[0] if comps else {}
+                a_c   = comps[1] if len(comps) > 1 else {}
+
+                raw_h = h_c.get("team", {}).get("displayName", "")
+                raw_a = a_c.get("team", {}).get("displayName", "")
+                home  = ESPN_NAME_MAP.get(raw_h, raw_h)
+                away  = ESPN_NAME_MAP.get(raw_a, raw_a)
+
+                hs    = str(h_c.get("score", ""))
+                as_   = str(a_c.get("score", ""))
+
+                st     = comp["status"]["type"]
+                sname  = st.get("name", "")
+                period = comp["status"].get("period", 0) or 0
+                if st.get("completed") or "FINAL" in sname or "FULL_TIME" in sname:
+                    status = "completed"
+                elif period > 0 or any(x in sname for x in (
+                    "IN_PROGRESS", "HALFTIME", "FIRST_HALF", "SECOND_HALF",
+                    "EXTRA_TIME", "OVERTIME", "PENALTY", "PAUSE"
+                )):
+                    status = "live"
+                else:
+                    status = "upcoming"
+
+                # Both teams must be in the same group for a valid group match
+                g_home = _TEAM_TO_GROUP.get(home)
+                g_away = _TEAM_TO_GROUP.get(away)
+                group  = g_home if g_home and g_home == g_away else None
+                winner = ""
+                if status == "completed" and hs.isdigit() and as_.isdigit():
+                    winner = home if int(hs) > int(as_) else (
+                        away if int(as_) > int(hs) else "draw")
+
+                all_matches.append({
+                    "date":       ev.get("date", "")[:10],
+                    "group":      group or "?",
+                    "home":       home,
+                    "home_code":  COUNTRY_CODES.get(home, "un"),
+                    "home_score": hs if status in ("completed", "live") else "",
+                    "away":       away,
+                    "away_code":  COUNTRY_CODES.get(away, "un"),
+                    "away_score": as_ if status in ("completed", "live") else "",
+                    "status":     status,
+                    "winner":     winner,
+                })
+        except Exception as e:
+            print(f"Group fixtures {d}: {e}")
+
+    # Organise by group, sort by date, assign matchday
+    by_group: dict = {g: [] for g in "ABCDEFGHIJKL"}
+    for m in all_matches:
+        if m["group"] in by_group:
+            by_group[m["group"]].append(m)
+    for matches in by_group.values():
+        matches.sort(key=lambda x: x["date"])
+        for i, m in enumerate(matches):
+            m["matchday"] = i // 2 + 1
+
+    result = {"groups": by_group}
+    _group_fixtures_cache["data"] = result
+    _group_fixtures_cache["ts"]   = now
+    return result
+
+
+@app.route("/api/group-fixtures")
+def api_group_fixtures():
+    data = fetch_all_group_fixtures()
+    if not data:
+        return jsonify({"error": "Could not fetch fixtures"}), 503
+    return jsonify(data)
 
 
 @app.route("/api/standings")

@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+{% block title %}Pitch Precision | Tournament Bracket{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Outer wrapper ────────────────────────────────────────────── */
+  .bracket-scroll {
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 0 0 24px;
+  }
+  .bracket-outer {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    min-width: max-content;
+    position: relative;
+  }
+
+  /* ── Half wrappers ────────────────────────────────────────────── */
+  .bracket-half {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  /* ── Round column ─────────────────────────────────────────────── */
+  .round-col {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 192px;
+  }
+  .round-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #4f6073;
+    text-align: center;
+    padding-bottom: 12px;
+    white-space: nowrap;
+  }
+  .matches-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    position: relative;
+  }
+
+  /* ── Match card ───────────────────────────────────────────────── */
+  .match-card {
+    background: #fff;
+    border: 1px solid #e1e3e4;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    flex-shrink: 0;
+    width: 192px;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .match-card:hover {
+    border-color: #006d37;
+    box-shadow: 0 4px 14px rgba(0,109,55,.12);
+  }
+  .match-team {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    min-height: 34px;
+  }
+  .match-team:first-child { border-bottom: 1px solid #f3f4f5; }
+  .match-team.winner { background: rgba(0,109,55,.07); }
+  .match-team.loser  { opacity: .45; }
+  .team-flag {
+    width: 22px; height: 14px;
+    object-fit: cover;
+    border-radius: 2px;
+    border: 1px solid #e7e8e9;
+    flex-shrink: 0;
+  }
+  .team-name {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #191c1d;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 115px;
+  }
+  .team-name.tbd { color: #6c7b6d; font-weight: 400; font-style: italic; }
+  .team-score {
+    font-size: 12px;
+    font-weight: 700;
+    color: #006d37;
+    min-width: 16px;
+    text-align: right;
+  }
+  .team-score.away-score { color: #4f6073; }
+  .match-footer {
+    font-size: 9.5px;
+    color: #6c7b6d;
+    text-align: center;
+    padding: 3px 8px;
+    background: #f8f9fa;
+    border-top: 1px solid #e1e3e4;
+  }
+  .match-footer.live { color: #ba1a1a; font-weight: 600; }
+
+  /* ── Final card (centre) ──────────────────────────────────────── */
+  .final-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    flex-shrink: 0;
+    width: 210px;
+  }
+  .final-label {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    color: #006d37;
+    text-transform: uppercase;
+    padding-bottom: 12px;
+    text-align: center;
+  }
+  .final-card { width: 210px; }
+  .final-card .match-team { padding: 10px 12px; min-height: 42px; }
+  .final-card .team-name  { font-size: 13px; max-width: 128px; }
+  .final-card .team-score { font-size: 15px; }
+
+  .trophy-box {
+    margin-top: 16px;
+    padding: 14px 12px;
+    background: linear-gradient(135deg,#006d37,#2ecc71);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    color: #fff;
+    width: 210px;
+    box-shadow: 0 6px 20px rgba(0,109,55,.3);
+  }
+
+  /* ── SVG connectors ───────────────────────────────────────────── */
+  .conn-wrap {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── 3rd Place ────────────────────────────────────────────────── */
+  .third-place-row {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px dashed #e1e3e4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  .fade-in { animation: fadeIn .45s ease-out both; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="mb-lg">
+  <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-md">
+    <div>
+      <div class="flex items-center gap-sm mb-xs">
+        <span class="flex items-center gap-xs bg-primary-container text-on-primary-container px-sm py-1 rounded-full font-label-caps text-label-caps">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary inline-block animate-pulse"></span>
+          LIVE 2026
+        </span>
+        <span class="text-secondary font-label-caps text-label-caps uppercase tracking-widest">Knockout Stage</span>
+      </div>
+      <h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Tournament Bracket</h1>
+      <p class="text-on-surface-variant font-body-sm text-body-sm max-w-lg">
+        Round of 32 through to the Final — updated live from ESPN after every match.
+      </p>
+    </div>
+    <div class="flex gap-md text-[10px] font-semibold tracking-wider text-secondary shrink-0">
+      <span class="flex items-center gap-xs"><span class="w-3 h-3 rounded-sm bg-primary/10 border border-primary inline-block"></span> Winner</span>
+      <span class="flex items-center gap-xs opacity-50"><span class="w-3 h-3 rounded-sm bg-surface-container inline-block"></span> Eliminated</span>
+    </div>
+  </div>
+</section>
+
+<div id="loading" class="text-center py-xl">
+  <div class="w-10 h-10 border-4 border-surface-variant border-t-primary rounded-full animate-spin mx-auto mb-md"></div>
+  <p class="font-body-sm text-on-surface-variant">Loading bracket…</p>
+</div>
+<div id="error" class="hidden tonal-layer-1 rounded-xl border border-error p-md text-center">
+  <span class="material-symbols-outlined text-error" style="font-size:40px">wifi_off</span>
+  <p class="font-body-sm text-on-surface-variant mt-sm">Could not load bracket data.</p>
+  <button onclick="loadBracket()" class="mt-md bg-primary text-on-primary px-md py-sm rounded-lg font-label-caps text-label-caps">Retry</button>
+</div>
+
+<div id="bracket-wrap" class="hidden fade-in">
+  <div class="tonal-layer-1 rounded-xl border border-surface-variant p-lg bracket-scroll">
+    <div class="bracket-outer" id="bracket-outer"></div>
+  </div>
+  <!-- 3rd place below main bracket -->
+  <div id="third-place-wrap"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CONN_W   = 40;   // connector SVG width px
+const BASE_H   = 76;   // single-match slot height (card ~68px + gap 8px)
+
+/* ── Flag / placeholder helpers ─────────────────────────────────── */
+function flagEl(code, name) {
+  if (!code || code === 'un') return '';
+  const s = name.replace(/'/g,"");
+  return `<img class="team-flag" src="https://flagcdn.com/w40/${code}.png" alt="${s}"
+               onerror="this.style.display='none'"/>`;
+}
+
+function matchCard(m, extraClass = '') {
+  const played   = m.status === 'STATUS_FINAL';
+  const live     = m.status === 'STATUS_IN_PROGRESS';
+  const homeWon  = played && m.winner === m.home;
+  const awayWon  = played && m.winner === m.away;
+  const hCls     = played ? (homeWon ? 'winner' : 'loser') : '';
+  const aCls     = played ? (awayWon ? 'winner' : 'loser') : '';
+  const hNameCls = m.is_tbd ? 'tbd' : '';
+  const aNameCls = m.is_tbd ? 'tbd' : '';
+  const hScore   = (played||live) ? `<span class="team-score">${m.home_score}</span>` : '';
+  const aScore   = (played||live) ? `<span class="team-score away-score">${m.away_score}</span>` : '';
+  const footer   = live
+    ? `<div class="match-footer live">● LIVE</div>`
+    : `<div class="match-footer">${m.date}</div>`;
+
+  return `
+    <div class="match-card ${extraClass}">
+      <div class="match-team ${hCls}">
+        ${flagEl(m.home_code,m.home)}
+        <span class="team-name ${hNameCls}">${m.home}</span>
+        ${hScore}
+      </div>
+      <div class="match-team ${aCls}">
+        ${flagEl(m.away_code,m.away)}
+        <span class="team-name ${aNameCls}">${m.away}</span>
+        ${aScore}
+      </div>
+      ${footer}
+    </div>`;
+}
+
+function tbdCard() {
+  return `<div class="match-card" style="opacity:.3">
+    <div class="match-team"><span class="team-name tbd">TBD</span></div>
+    <div class="match-team"><span class="team-name tbd">TBD</span></div>
+    <div class="match-footer">–</div></div>`;
+}
+
+/* ── Build a single round column ─────────────────────────────────── */
+function buildRoundCol(label, matches, slotCount, roundIdx) {
+  const slotH = BASE_H * Math.pow(2, roundIdx);
+  const col   = document.createElement('div');
+  col.className = 'round-col';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'round-label';
+  lbl.textContent = label;
+  col.appendChild(lbl);
+
+  const mc = document.createElement('div');
+  mc.className = 'matches-col';
+
+  const padded = [...matches];
+  while (padded.length < slotCount) padded.push(null);
+
+  padded.forEach(m => {
+    const slot = document.createElement('div');
+    slot.style.cssText = `height:${slotH}px;display:flex;align-items:center;`;
+    slot.innerHTML = m ? matchCard(m) : tbdCard();
+    mc.appendChild(slot);
+  });
+
+  col.appendChild(mc);
+  return col;
+}
+
+/* ── SVG connector between two rounds ────────────────────────────── */
+function buildConnector(matchCount, roundIdx, mirrored) {
+  const slotH   = BASE_H * Math.pow(2, roundIdx);
+  const totalH  = matchCount * slotH;
+  const labelH  = 28;
+  const armX    = CONN_W / 2;
+  const pairsN  = matchCount / 2;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'conn-wrap';
+  wrap.style.cssText = `width:${CONN_W}px;padding-top:${labelH}px;`;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',  CONN_W);
+  svg.setAttribute('height', totalH);
+  svg.style.display = 'block';
+  svg.style.overflow = 'visible';
+
+  for (let p = 0; p < pairsN; p++) {
+    const topY = p * slotH * 2 + slotH / 2;
+    const botY = p * slotH * 2 + slotH * 1.5;
+    const midY = (topY + botY) / 2;
+
+    // vertical bracket arm
+    const arm = document.createElementNS('http://www.w3.org/2000/svg','path');
+    let d;
+    if (!mirrored) {
+      d = `M0,${topY} H${armX} V${botY} H0`;
+    } else {
+      d = `M${CONN_W},${topY} H${armX} V${botY} H${CONN_W}`;
+    }
+    arm.setAttribute('d', d);
+    arm.setAttribute('fill','none');
+    arm.setAttribute('stroke','#bbcbbb');
+    arm.setAttribute('stroke-width','1.5');
+    svg.appendChild(arm);
+
+    // horizontal stub to next round
+    const stub = document.createElementNS('http://www.w3.org/2000/svg','line');
+    if (!mirrored) {
+      stub.setAttribute('x1', armX); stub.setAttribute('x2', CONN_W);
+    } else {
+      stub.setAttribute('x1', armX); stub.setAttribute('x2', 0);
+    }
+    stub.setAttribute('y1', midY); stub.setAttribute('y2', midY);
+    stub.setAttribute('stroke','#bbcbbb');
+    stub.setAttribute('stroke-width','1.5');
+    svg.appendChild(stub);
+  }
+
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+/* ── Short stub from SF to Final (both sides) ────────────────────── */
+function buildSFtoFinalStub(mirrored) {
+  const h = BASE_H * 8;   // SF slot height = 8× base
+  const wrap = document.createElement('div');
+  wrap.className = 'conn-wrap';
+  wrap.style.cssText = `width:${CONN_W}px;padding-top:28px;`;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width', CONN_W); svg.setAttribute('height', h);
+  svg.style.display = 'block';
+
+  const midY = h / 2;
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  if (!mirrored) {
+    line.setAttribute('x1', 0);      line.setAttribute('x2', CONN_W);
+  } else {
+    line.setAttribute('x1', CONN_W); line.setAttribute('x2', 0);
+  }
+  line.setAttribute('y1', midY); line.setAttribute('y2', midY);
+  line.setAttribute('stroke','#bbcbbb');
+  line.setAttribute('stroke-width','1.5');
+  svg.appendChild(line);
+  wrap.appendChild(svg);
+  return wrap;
+}
+
+/* ── Main build function ─────────────────────────────────────────── */
+function buildBracket(data) {
+  const outer = document.getElementById('bracket-outer');
+  outer.innerHTML = '';
+
+  const byRound = {};
+  for (const r of data.rounds) byRound[r.name] = r.matches;
+
+  const allR32 = byRound['Round of 32']    || [];
+  const allR16 = byRound['Round of 16']    || [];
+  const allQF  = byRound['Quarter-Finals'] || [];
+  const allSF  = byRound['Semi-Finals']    || [];
+  const finals = byRound['Final']          || [];
+  const third  = byRound['Third Place']    || [];
+
+  // Split each round into left (first half) and right (second half)
+  const half = n => Math.ceil(n / 2);
+  const leftR32  = allR32.slice(0, 8),  rightR32 = allR32.slice(8, 16);
+  const leftR16  = allR16.slice(0, 4),  rightR16 = allR16.slice(4, 8);
+  const leftQF   = allQF.slice(0, 2),   rightQF  = allQF.slice(2, 4);
+  const leftSF   = allSF.slice(0, 1),   rightSF  = allSF.slice(1, 2);
+
+  /* ── Left half: R32 → R16 → QF → SF ────────────────────────── */
+  const leftHalf = document.createElement('div');
+  leftHalf.className = 'bracket-half';
+
+  const leftRounds = [
+    {label:'Round of 32', matches:leftR32,  size:8, ri:0},
+    {label:'Round of 16', matches:leftR16,  size:4, ri:1},
+    {label:'Quarter-Finals', matches:leftQF, size:2, ri:2},
+    {label:'Semi-Finals', matches:leftSF,   size:1, ri:3},
+  ];
+
+  leftRounds.forEach(({label,matches,size,ri}, i) => {
+    leftHalf.appendChild(buildRoundCol(label, matches, size, ri));
+    if (i < leftRounds.length - 1)
+      leftHalf.appendChild(buildConnector(size, ri, false));
+  });
+  leftHalf.appendChild(buildSFtoFinalStub(false));
+  outer.appendChild(leftHalf);
+
+  /* ── Centre: Final ──────────────────────────────────────────── */
+  const finalCol = document.createElement('div');
+  finalCol.className = 'final-col';
+
+  const flbl = document.createElement('div');
+  flbl.className = 'final-label';
+  flbl.textContent = '⚽ Final';
+  finalCol.appendChild(flbl);
+
+  const finalSlot = document.createElement('div');
+  finalSlot.style.cssText = `height:${BASE_H*16}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;`;
+
+  if (finals[0]) {
+    finalSlot.innerHTML = matchCard(finals[0], 'final-card');
+    if (finals[0].winner) {
+      const wCode = finals[0].winner === finals[0].home
+        ? finals[0].home_code : finals[0].away_code;
+      finalSlot.innerHTML += `
+        <div class="trophy-box">
+          <span class="material-symbols-outlined text-[40px]" style="font-variation-settings:'FILL' 1">emoji_events</span>
+          <div class="flex items-center gap-sm justify-center">
+            <img src="https://flagcdn.com/w40/${wCode}.png" class="w-7 h-5 object-cover rounded-sm"/>
+            <span class="font-bold text-[15px]">${finals[0].winner}</span>
+          </div>
+          <div style="font-size:9px;letter-spacing:.1em;opacity:.8">2026 WORLD CHAMPION</div>
+        </div>`;
+    }
+  } else {
+    finalSlot.innerHTML = tbdCard().replace('match-card','match-card final-card');
+  }
+
+  finalCol.appendChild(finalSlot);
+  outer.appendChild(finalCol);
+
+  /* ── Right half: SF → QF → R16 → R32 (reversed order) ──────── */
+  const rightHalf = document.createElement('div');
+  rightHalf.className = 'bracket-half';
+
+  rightHalf.appendChild(buildSFtoFinalStub(true));
+
+  const rightRounds = [
+    {label:'Semi-Finals',   matches:rightSF,  size:1, ri:3},
+    {label:'Quarter-Finals',matches:rightQF,  size:2, ri:2},
+    {label:'Round of 16',   matches:rightR16, size:4, ri:1},
+    {label:'Round of 32',   matches:rightR32, size:8, ri:0},
+  ];
+
+  rightRounds.forEach(({label,matches,size,ri}, i) => {
+    // Connector comes BEFORE the current column (connects previous col into this one)
+    // matchCount = this column's size, roundIdx = this column's ri
+    if (i > 0) rightHalf.appendChild(buildConnector(size, ri, true));
+    rightHalf.appendChild(buildRoundCol(label, matches, size, ri));
+  });
+
+  outer.appendChild(rightHalf);
+
+  /* ── 3rd Place below ─────────────────────────────────────────── */
+  const tpWrap = document.getElementById('third-place-wrap');
+  tpWrap.innerHTML = '';
+  if (third[0]) {
+    tpWrap.innerHTML = `
+      <div class="third-place-row mt-lg">
+        <div class="font-label-caps text-label-caps text-secondary mb-sm flex items-center gap-xs">
+          <span class="material-symbols-outlined text-[14px]">military_tech</span>
+          Third Place Play-off · ${third[0].date}
+        </div>
+        ${matchCard(third[0])}
+      </div>`;
+  }
+}
+
+async function loadBracket() {
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('bracket-wrap').classList.add('hidden');
+  try {
+    const res  = await fetch('/api/bracket');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    if (!data.rounds?.length) throw new Error();
+    buildBracket(data);
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('bracket-wrap').classList.remove('hidden');
+  } catch {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('error').classList.remove('hidden');
+  }
+}
+
+loadBracket();
+</script>
+{% endblock %}
