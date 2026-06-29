@@ -418,23 +418,47 @@ function buildBracket(data) {
   const finalSlot = document.createElement('div');
   finalSlot.style.cssText = `height:${totalH}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;`;
 
+  // World Cup trophy image above the Final match card
+  const trophyDiv = document.createElement('div');
+  trophyDiv.style.cssText = 'text-align:center;';
+  const trophyImg = document.createElement('img');
+  trophyImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/FIFA_World_Cup_2022_Trophy.png/220px-FIFA_World_Cup_2022_Trophy.png';
+  trophyImg.alt = 'FIFA World Cup Trophy';
+  trophyImg.style.cssText = 'height:120px;width:auto;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,109,55,0.25));';
+  trophyImg.onerror = function() { this.style.display='none'; trophyFallback.style.display='block'; };
+  const trophyFallback = document.createElement('span');
+  trophyFallback.textContent = '🏆';
+  trophyFallback.style.cssText = 'font-size:72px;line-height:1;display:none;';
+  const trophyCaption = document.createElement('div');
+  trophyCaption.textContent = 'July 19 · MetLife Stadium';
+  trophyCaption.style.cssText = 'font-size:10px;font-weight:700;letter-spacing:.12em;color:#006d37;text-transform:uppercase;margin-top:6px;';
+  trophyDiv.appendChild(trophyImg);
+  trophyDiv.appendChild(trophyFallback);
+  trophyDiv.appendChild(trophyCaption);
+  finalSlot.appendChild(trophyDiv);
+
   if (finals[0]) {
-    finalSlot.innerHTML = matchCard(finals[0], 'final-card');
+    const cardWrap = document.createElement('div');
+    cardWrap.innerHTML = matchCard(finals[0], 'final-card');
+    finalSlot.appendChild(cardWrap.firstElementChild);
     if (finals[0].winner) {
       const wCode = finals[0].winner === finals[0].home
         ? finals[0].home_code : finals[0].away_code;
-      finalSlot.innerHTML += `
-        <div class="trophy-box">
-          <span class="material-symbols-outlined text-[40px]" style="font-variation-settings:'FILL' 1">emoji_events</span>
-          <div class="flex items-center gap-sm justify-center">
-            <img src="https://flagcdn.com/w40/${wCode}.png" class="w-7 h-5 object-cover rounded-sm"/>
-            <span class="font-bold text-[15px]">${finals[0].winner}</span>
-          </div>
-          <div style="font-size:9px;letter-spacing:.1em;opacity:.8">2026 WORLD CHAMPION</div>
-        </div>`;
+      const winBox = document.createElement('div');
+      winBox.className = 'trophy-box';
+      winBox.innerHTML = `
+        <span class="material-symbols-outlined text-[40px]" style="font-variation-settings:'FILL' 1">emoji_events</span>
+        <div class="flex items-center gap-sm justify-center">
+          <img src="https://flagcdn.com/w40/${wCode}.png" class="w-7 h-5 object-cover rounded-sm"/>
+          <span class="font-bold text-[15px]">${finals[0].winner}</span>
+        </div>
+        <div style="font-size:9px;letter-spacing:.1em;opacity:.8">2026 WORLD CHAMPION</div>`;
+      finalSlot.appendChild(winBox);
     }
   } else {
-    finalSlot.innerHTML = tbdCard().replace('match-card', 'match-card final-card');
+    const tbdWrap = document.createElement('div');
+    tbdWrap.innerHTML = tbdCard().replace('match-card', 'match-card final-card');
+    finalSlot.appendChild(tbdWrap.firstElementChild);
   }
 
   finalCol.appendChild(finalSlot);
