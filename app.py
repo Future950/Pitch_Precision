@@ -809,6 +809,77 @@ def fetch_bracket():
         for lst in by_round.values():
             lst.sort(key=lambda x: x["date"])
 
+        # ── Fill missing R32 slots from live standings ───────────────
+        # ESPN sometimes publishes R32 matches gradually after the group
+        # stage ends. Fill any gaps using the standings so all qualified
+        # teams are visible. Unassigned teams are paired sequentially;
+        # remaining best 3rd-place qualifiers are included too.
+        try:
+            stnd = fetch_espn_standings()
+            if stnd and len(by_round["Round of 32"]) < 16:
+                assigned = set()
+                for m in by_round["Round of 32"]:
+                    assigned.add(m["home"])
+                    assigned.add(m["away"])
+
+                # Collect unassigned top-2 teams (guaranteed R32 qualifiers)
+                unassigned = []
+                for letter in sorted(stnd.keys()):
+                    for td in stnd[letter][:2]:
+                        t = td["team"]
+                        if t and t not in assigned:
+                            unassigned.append(t)
+                            assigned.add(t)
+
+                # Add best unassigned 3rd-place teams to fill remaining slots
+                # Total teams still needed = (16 - ESPN_count) * 2 - top2_unassigned
+                total_teams_needed = max(0, (16 - len(by_round["Round of 32"])) * 2 - len(unassigned))
+                third_candidates = []
+                for letter in sorted(stnd.keys()):
+                    if len(stnd[letter]) > 2:
+                        t = stnd[letter][2]["team"]
+                        pts = _safe(stnd[letter][2].get("pts", 0))
+                        if t and t not in assigned:
+                            third_candidates.append((pts, t))
+                third_candidates.sort(reverse=True)
+                for _, t in third_candidates[:total_teams_needed]:
+                    if t not in assigned:
+                        unassigned.append(t)
+                        assigned.add(t)
+
+                # Pair teams sequentially and append as bracket matches
+                for i in range(0, len(unassigned) - 1, 2):
+                    home, away = unassigned[i], unassigned[i + 1]
+                    by_round["Round of 32"].append({
+                        "id":         f"gen_{i}",
+                        "date":       "TBD",
+                        "round":      "Round of 32",
+                        "home":       home,
+                        "home_code":  COUNTRY_CODES.get(home, "un"),
+                        "home_score": "",
+                        "away":       away,
+                        "away_code":  COUNTRY_CODES.get(away, "un"),
+                        "away_score": "",
+                        "status":     "upcoming",
+                        "winner":     "",
+                        "is_tbd":     True,
+                    })
+                # If an odd team is left, add vs TBD
+                if len(unassigned) % 2 == 1:
+                    home = unassigned[-1]
+                    by_round["Round of 32"].append({
+                        "id":         f"gen_odd",
+                        "date":       "TBD",
+                        "round":      "Round of 32",
+                        "home":       home,
+                        "home_code":  COUNTRY_CODES.get(home, "un"),
+                        "home_score": "", "away": "TBD", "away_code": "un",
+                        "away_score": "", "status": "upcoming",
+                        "winner": "", "is_tbd": True,
+                    })
+        except Exception as ge:
+            print(f"R32 fill error: {ge}")
+
         rounds = [{"name": r, "matches": by_round[r]}
                   for r in ROUND_ORDER if by_round[r]]
         result = {"rounds": rounds}
