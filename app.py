@@ -670,56 +670,40 @@ _bracket_cache: dict = {"data": None, "ts": 0.0}
 ROUND_ORDER = ["Round of 32", "Round of 16", "Quarter-Finals",
                "Semi-Finals", "Third Place", "Final"]
 
-# Official 2026 WC R32 display order (pairs that feed the same R16 slot are adjacent)
-# Source: Wikipedia 2026 FIFA World Cup knockout stage
+# Official 2026 WC R32 display order — source: FIFA official bracket (USA Today image)
+# Pairs that feed the SAME R16 slot are always ADJACENT (pos N and N+1 where N is even).
+# Left bracket: pos 0-7 (Groups A-F area), Right bracket: pos 8-15 (Groups G-L area)
 R32_BRACKET_POS: dict = {
-    frozenset(["South Africa",  "Canada"]):                     0,   # M73 → R16-M90
-    frozenset(["Germany",       "Paraguay"]):                   1,   # M75 → R16-M90
-    frozenset(["Brazil",        "Japan"]):                      2,   # M74 → R16-M89
-    frozenset(["Ivory Coast",   "Norway"]):                     3,   # M77 → R16-M89
-    frozenset(["Belgium",       "Senegal"]):                    4,   # M81 → R16-M94
-    frozenset(["United States", "Bosnia and Herzegovina"]):     5,   # M82 → R16-M94
-    frozenset(["Spain",         "Austria"]):                    6,   # M83 → R16-M93
-    frozenset(["Portugal",      "Croatia"]):                    7,   # M84 → R16-M93
-    frozenset(["Netherlands",   "Morocco"]):                    8,   # M76 → R16-M91
-    frozenset(["France",        "Sweden"]):                     9,   # M78 → R16-M91
-    frozenset(["Mexico",        "Ecuador"]):                    10,  # M79 → R16-M92
-    frozenset(["England",       "DR Congo"]):                   11,  # M80 → R16-M92
-    frozenset(["Switzerland",   "Algeria"]):                    12,  # M85 → R16-M96
-    frozenset(["Argentina",     "Cape Verde"]):                 13,  # M87 → R16-M96
-    frozenset(["Australia",     "Egypt"]):                      14,  # M86 → R16-M95
-    frozenset(["Colombia",      "Ghana"]):                      15,  # M88 → R16-M95
-}
-
-# ESPN internal R32 number pair → R16 display position
-# Derived from ESPN's "Round of 32 X Winner vs Y Winner" R16 placeholders
-R16_ESPN_PAIR_POS: dict = {
-    (1,  3):  0,   # Canada vs W(Germany/Paraguay)         → R16-M90
-    (2,  5):  1,   # W(Brazil/Japan) vs W(Ivory Coast/Nor) → R16-M89
-    (9,  10): 2,   # W(Belgium/Sen) vs W(USA/Bosnia)       → R16-M94
-    (11, 12): 3,   # W(Spain/Aut) vs W(Portugal/Cro)       → R16-M93
-    (4,  6):  4,   # W(Netherlands/Mor) vs W(France/Swe)   → R16-M91
-    (7,  8):  5,   # W(Mexico/Ecu) vs W(England/Congo)     → R16-M92
-    (13, 15): 6,   # W(Switzerland/Alg) vs W(Argentina/CV) → R16-M96
-    (14, 16): 7,   # W(Australia/Egy) vs W(Colombia/Gha)   → R16-M95
-}
-
-# QF display order (top→bottom) matches Wikipedia: M97, M98, M99, M100
-# ESPN R16 internal numbers assumed date-ordered; QF sort handled via R16 min pair
-QF_ESPN_PAIR_POS: dict = {
-    (1, 2): 0,    # W(R16-1) vs W(R16-2)  = QF-M97
-    (3, 4): 1,    # W(R16-3) vs W(R16-4)  = QF-M98
-    (5, 6): 2,    # W(R16-5) vs W(R16-6)  = QF-M99
-    (7, 8): 3,    # W(R16-7) vs W(R16-8)  = QF-M100
+    # Left bracket ──────────────────────────────────────────────────────────────
+    frozenset(["Germany",       "Paraguay"]):               0,  # ESPN#4  → R16 with FRA/SWE
+    frozenset(["France",        "Sweden"]):                 1,  # ESPN#6  → R16 with GER/PAR
+    frozenset(["South Africa",  "Canada"]):                 2,  # ESPN#1  → R16 with NED/MAR
+    frozenset(["Netherlands",   "Morocco"]):                3,  # ESPN#3  → R16 with RSA/CAN ★
+    frozenset(["United States", "Bosnia and Herzegovina"]): 4,  # ESPN#10 → R16 with BEL/SEN
+    frozenset(["Belgium",       "Senegal"]):                5,  # ESPN#9  → R16 with USA/BIH
+    frozenset(["Portugal",      "Croatia"]):                6,  # ESPN#12 → R16 with ESP/AUT
+    frozenset(["Spain",         "Austria"]):                7,  # ESPN#11 → R16 with POR/CRO
+    # Right bracket ─────────────────────────────────────────────────────────────
+    frozenset(["Brazil",        "Japan"]):                  8,  # ESPN#2  → R16 with CIV/NOR
+    frozenset(["Ivory Coast",   "Norway"]):                 9,  # ESPN#5  → R16 with BRA/JPN
+    frozenset(["Mexico",        "Ecuador"]):                10, # ESPN#7  → R16 with ENG/COD
+    frozenset(["England",       "DR Congo"]):               11, # ESPN#8  → R16 with MEX/ECU
+    frozenset(["Switzerland",   "Algeria"]):                12, # ESPN#13 → R16 with ARG/CPV
+    frozenset(["Argentina",     "Cape Verde"]):             13, # ESPN#15 → R16 with SUI/ALG
+    frozenset(["Australia",     "Egypt"]):                  14, # ESPN#14 → R16 with COL/GHA
+    frozenset(["Colombia",      "Ghana"]):                  15, # ESPN#16 → R16 with AUS/EGY
 }
 
 # ESPN internal R32 match number → bracket display position (0-15)
-# Used when one R16 team is a known name and the other is still a placeholder
+# All R16/QF/SF sorting flows through bracket positions via _team_bpos()
 ESPN_R32_NUM_TO_BPOS: dict = {
-    1: 0, 3: 1, 2: 2, 5: 3, 9: 4, 10: 5,
-    11: 6, 12: 7, 4: 8, 6: 9, 7: 10, 8: 11,
-    13: 12, 15: 13, 14: 14, 16: 15,
+    4: 0, 6: 1, 1: 2, 3: 3, 10: 4, 9: 5, 12: 6, 11: 7,
+    2: 8, 5: 9, 7: 10, 8: 11, 13: 12, 15: 13, 14: 14, 16: 15,
 }
+
+# Legacy dicts kept for compatibility (not used by primary sort path)
+R16_ESPN_PAIR_POS: dict = {}
+QF_ESPN_PAIR_POS:  dict = {}
 
 
 def _infer_round(home: str, away: str, date: str) -> str:
@@ -882,11 +866,26 @@ def fetch_bracket():
                 return min(p1, p2) // 2   # pairs (0,1)→0  (2,3)→1  etc.
             return 99
 
-        def _qf_sort_key(m):
-            nums = sorted(int(n) for n in _re.findall(r'R16 #(\d+)', m["home"] + m["away"]))
-            if len(nums) == 2:
-                return QF_ESPN_PAIR_POS.get(tuple(nums), 99)
+        def _r16_bpos(name: str):
+            """Bracket pos of the R32 team behind an R16 team name or R16 placeholder."""
+            # Real team name already resolved from R16
+            for k, p in R32_BRACKET_POS.items():
+                if name in k:
+                    return p
+            # "R32 #X" placeholder inside an R16 entry
+            nums = _re.findall(r'R32 #(\d+)', name)
+            if nums:
+                return ESPN_R32_NUM_TO_BPOS.get(int(nums[0]), 99)
+            # R16 placeholders "R16 #X" — approximate by R16 index
+            nums16 = _re.findall(r'R16 #(\d+)', name)
+            if nums16:
+                return (int(nums16[0]) - 1) * 2   # R16 #1 → 0, #2 → 2 …
             return 99
+
+        def _qf_sort_key(m):
+            p1 = _r16_bpos(m["home"])
+            p2 = _r16_bpos(m["away"])
+            return min(p1, p2) // 4 if min(p1, p2) < 99 else 99
 
         by_round["Round of 32"].sort(key=_r32_sort_key)
         by_round["Round of 16"].sort(key=_r16_sort_key)
