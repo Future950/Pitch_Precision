@@ -422,9 +422,9 @@ function buildBracket(data) {
   const trophyDiv = document.createElement('div');
   trophyDiv.style.cssText = 'text-align:center;';
   const trophyImg = document.createElement('img');
-  trophyImg.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/FIFA_World_Cup_2022_Trophy.png/220px-FIFA_World_Cup_2022_Trophy.png';
-  trophyImg.alt = 'FIFA World Cup Trophy';
-  trophyImg.style.cssText = 'height:120px;width:auto;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,109,55,0.25));';
+  trophyImg.src = '/static/wc_logo.png';
+  trophyImg.alt = 'FIFA World Cup 2026';
+  trophyImg.style.cssText = 'height:130px;width:auto;object-fit:contain;filter:drop-shadow(0 4px 16px rgba(0,109,55,0.30));';
   trophyImg.onerror = function() { this.style.display='none'; trophyFallback.style.display='block'; };
   const trophyFallback = document.createElement('span');
   trophyFallback.textContent = '🏆';
