@@ -373,7 +373,7 @@ function buildSFtoFinalStub(mirrored) {
   return wrap;
 }
 
-/* ── Main build function ─────────────────────────────────────────── */
+/* ── Main build function — single left-to-right bracket ─────────── */
 function buildBracket(data) {
   const outer = document.getElementById('bracket-outer');
   outer.innerHTML = '';
@@ -381,40 +381,31 @@ function buildBracket(data) {
   const byRound = {};
   for (const r of data.rounds) byRound[r.name] = r.matches;
 
-  const allR32 = byRound['Round of 32']    || [];
-  const allR16 = byRound['Round of 16']    || [];
-  const allQF  = byRound['Quarter-Finals'] || [];
-  const allSF  = byRound['Semi-Finals']    || [];
-  const finals = byRound['Final']          || [];
-  const third  = byRound['Third Place']    || [];
+  const allR32  = byRound['Round of 32']    || [];
+  const allR16  = byRound['Round of 16']    || [];
+  const allQF   = byRound['Quarter-Finals'] || [];
+  const allSF   = byRound['Semi-Finals']    || [];
+  const finals  = byRound['Final']          || [];
+  const third   = byRound['Third Place']    || [];
 
-  // Split each round into left (first half) and right (second half)
-  const half = n => Math.ceil(n / 2);
-  const leftR32  = allR32.slice(0, 8),  rightR32 = allR32.slice(8, 16);
-  const leftR16  = allR16.slice(0, 4),  rightR16 = allR16.slice(4, 8);
-  const leftQF   = allQF.slice(0, 2),   rightQF  = allQF.slice(2, 4);
-  const leftSF   = allSF.slice(0, 1),   rightSF  = allSF.slice(1, 2);
-
-  /* ── Left half: R32 → R16 → QF → SF ────────────────────────── */
-  const leftHalf = document.createElement('div');
-  leftHalf.className = 'bracket-half';
-
-  const leftRounds = [
-    {label:'Round of 32', matches:leftR32,  size:8, ri:0},
-    {label:'Round of 16', matches:leftR16,  size:4, ri:1},
-    {label:'Quarter-Finals', matches:leftQF, size:2, ri:2},
-    {label:'Semi-Finals', matches:leftSF,   size:1, ri:3},
+  // All rounds flow left → right; R32 on far left with all 16 slots
+  const rounds = [
+    { label: 'Round of 32',    matches: allR32, size: 16, ri: 0 },
+    { label: 'Round of 16',    matches: allR16, size: 8,  ri: 1 },
+    { label: 'Quarter-Finals', matches: allQF,  size: 4,  ri: 2 },
+    { label: 'Semi-Finals',    matches: allSF,  size: 2,  ri: 3 },
   ];
 
-  leftRounds.forEach(({label,matches,size,ri}, i) => {
-    leftHalf.appendChild(buildRoundCol(label, matches, size, ri));
-    if (i < leftRounds.length - 1)
-      leftHalf.appendChild(buildConnector(size, ri, false));
+  rounds.forEach(({ label, matches, size, ri }, i) => {
+    outer.appendChild(buildRoundCol(label, matches, size, ri));
+    if (i < rounds.length - 1)
+      outer.appendChild(buildConnector(size, ri, false));
   });
-  leftHalf.appendChild(buildSFtoFinalStub(false));
-  outer.appendChild(leftHalf);
 
-  /* ── Centre: Final ──────────────────────────────────────────── */
+  // Short stub from SF → Final
+  outer.appendChild(buildSFtoFinalStub(false));
+
+  /* ── Final column ────────────────────────────────────────────── */
   const finalCol = document.createElement('div');
   finalCol.className = 'final-col';
 
@@ -423,8 +414,9 @@ function buildBracket(data) {
   flbl.textContent = '⚽ Final';
   finalCol.appendChild(flbl);
 
+  const totalH   = 16 * BASE_H;
   const finalSlot = document.createElement('div');
-  finalSlot.style.cssText = `height:${BASE_H*16}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;`;
+  finalSlot.style.cssText = `height:${totalH}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;`;
 
   if (finals[0]) {
     finalSlot.innerHTML = matchCard(finals[0], 'final-card');
@@ -442,33 +434,11 @@ function buildBracket(data) {
         </div>`;
     }
   } else {
-    finalSlot.innerHTML = tbdCard().replace('match-card','match-card final-card');
+    finalSlot.innerHTML = tbdCard().replace('match-card', 'match-card final-card');
   }
 
   finalCol.appendChild(finalSlot);
   outer.appendChild(finalCol);
-
-  /* ── Right half: SF → QF → R16 → R32 (reversed order) ──────── */
-  const rightHalf = document.createElement('div');
-  rightHalf.className = 'bracket-half';
-
-  rightHalf.appendChild(buildSFtoFinalStub(true));
-
-  const rightRounds = [
-    {label:'Semi-Finals',   matches:rightSF,  size:1, ri:3},
-    {label:'Quarter-Finals',matches:rightQF,  size:2, ri:2},
-    {label:'Round of 16',   matches:rightR16, size:4, ri:1},
-    {label:'Round of 32',   matches:rightR32, size:8, ri:0},
-  ];
-
-  rightRounds.forEach(({label,matches,size,ri}, i) => {
-    // Connector comes BEFORE the current column (connects previous col into this one)
-    // matchCount = this column's size, roundIdx = this column's ri
-    if (i > 0) rightHalf.appendChild(buildConnector(size, ri, true));
-    rightHalf.appendChild(buildRoundCol(label, matches, size, ri));
-  });
-
-  outer.appendChild(rightHalf);
 
   /* ── 3rd Place below ─────────────────────────────────────────── */
   const tpWrap = document.getElementById('third-place-wrap');
