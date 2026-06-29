@@ -186,6 +186,7 @@
       <p class="text-on-surface-variant font-body-sm text-body-sm max-w-lg">
         Round of 32 through to the Final — updated live from ESPN after every match.
       </p>
+      <span id="bracket-updated" class="font-label-caps text-[10px] text-secondary mt-xs"></span>
     </div>
     <div class="flex gap-md text-[10px] font-semibold tracking-wider text-secondary shrink-0">
       <span class="flex items-center gap-xs"><span class="w-3 h-3 rounded-sm bg-primary/10 border border-primary inline-block"></span> Winner</span>
@@ -484,24 +485,49 @@ function buildBracket(data) {
   }
 }
 
-async function loadBracket() {
-  document.getElementById('loading').classList.remove('hidden');
-  document.getElementById('error').classList.add('hidden');
-  document.getElementById('bracket-wrap').classList.add('hidden');
+let _lastBracketJSON = '';
+
+async function loadBracket(silent = false) {
+  if (!silent) {
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('error').classList.add('hidden');
+    document.getElementById('bracket-wrap').classList.add('hidden');
+  }
   try {
     const res  = await fetch('/api/bracket');
     if (!res.ok) throw new Error();
     const data = await res.json();
     if (!data.rounds?.length) throw new Error();
-    buildBracket(data);
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('bracket-wrap').classList.remove('hidden');
+
+    // Only re-render if data actually changed
+    const json = JSON.stringify(data);
+    if (json !== _lastBracketJSON) {
+      _lastBracketJSON = json;
+      buildBracket(data);
+      if (!silent) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('bracket-wrap').classList.remove('hidden');
+      }
+    }
+
+    // Update timestamp
+    document.getElementById('bracket-updated').textContent =
+      'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    if (!silent) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('bracket-wrap').classList.remove('hidden');
+    }
   } catch {
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('error').classList.remove('hidden');
+    if (!silent) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('error').classList.remove('hidden');
+    }
   }
 }
 
+// Initial load + poll every 90 seconds
 loadBracket();
+setInterval(() => loadBracket(true), 90000);
 </script>
 {% endblock %}

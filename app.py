@@ -711,7 +711,7 @@ def fetch_bracket():
     """
     import time as _time
     now = _time.time()
-    if _bracket_cache["data"] and now - _bracket_cache["ts"] < 300:
+    if _bracket_cache["data"] and now - _bracket_cache["ts"] < 90:
         return _bracket_cache["data"]
 
     try:
