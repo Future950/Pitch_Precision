@@ -749,8 +749,8 @@ def fetch_bracket():
 
         all_matches = []
 
-        for i in range(22):           # Jul 1 – Jul 22
-            d = (_dt(2026, 7, 1) + _td(days=i)).strftime("%Y%m%d")
+        for i in range(25):           # Jun 28 – Jul 22 (R32 starts Jun 28)
+            d = (_dt(2026, 6, 28) + _td(days=i)).strftime("%Y%m%d")
             try:
                 r = requests.get(
                     "https://site.api.espn.com/apis/site/v2/sports/soccer"
