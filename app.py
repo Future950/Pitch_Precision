@@ -742,8 +742,28 @@ R16_ESPN_PAIR_POS: dict = {}
 QF_ESPN_PAIR_POS:  dict = {}
 
 
+# Official 2026 WC knockout match dates (confirmed against ESPN scoreboard).
+# Used as the PRIMARY round signal — once ESPN resolves a round's matchup to
+# real team names (e.g. "Canada vs Morocco" instead of "Round of 32 X Winner"),
+# placeholder-text detection alone can no longer tell the round apart, which
+# previously caused resolved R16/QF matches to fall back into "Round of 32".
+_ROUND_DATE_RANGES = [
+    ("2026-06-28", "2026-07-03", "Round of 32"),
+    ("2026-07-04", "2026-07-07", "Round of 16"),
+    ("2026-07-09", "2026-07-11", "Quarter-Finals"),
+    ("2026-07-14", "2026-07-15", "Semi-Finals"),
+    ("2026-07-18", "2026-07-18", "Third Place"),
+    ("2026-07-19", "2026-07-19", "Final"),
+]
+
+
 def _infer_round(home: str, away: str, date: str) -> str:
-    """Infer knockout round from ESPN placeholder team names."""
+    """Infer knockout round, preferring the match date over placeholder text."""
+    if date:
+        for start, end, rnd in _ROUND_DATE_RANGES:
+            if start <= date <= end:
+                return rnd
+    # Fallback for missing dates: infer from ESPN placeholder team names.
     combined = home + away
     if "Semifinal" in combined:
         return "Third Place" if "Loser" in combined else "Final"
@@ -822,6 +842,7 @@ def fetch_bracket():
 
         for i in range(25):           # Jun 28 – Jul 22 (R32 starts Jun 28)
             d = (_dt(2026, 6, 28) + _td(days=i)).strftime("%Y%m%d")
+            query_date = (_dt(2026, 6, 28) + _td(days=i)).strftime("%Y-%m-%d")
             try:
                 r = requests.get(
                     "https://site.api.espn.com/apis/site/v2/sports/soccer"
@@ -836,14 +857,28 @@ def fetch_bracket():
                     raw_a = a_c.get("team", {}).get("displayName", "TBD")
                     hs    = h_c.get("score", "")
                     as_   = a_c.get("score", "")
-                    st    = comp["status"]["type"]["name"]
+                    stype = comp["status"]["type"]
+                    st    = stype.get("name", "")
+                    # ESPN's "state" is the most reliable round-trip indicator:
+                    # "pre" = upcoming, "in" = live, "post" = completed — this
+                    # covers every status name variant (FULL_TIME, FINAL_PEN,
+                    # FIRST_HALF, PENALTY shootout, etc.) without brittle
+                    # substring matching on the human-readable status name.
+                    state = stype.get("state", "")
+                    if state == "post" or stype.get("completed"):
+                        match_status = "completed"
+                    elif state == "in":
+                        match_status = "live"
+                    else:
+                        match_status = "upcoming"
+                    clock = comp.get("status", {}).get("displayClock", "") if match_status == "live" else ""
                     date  = ev.get("date", "")[:10]
 
                     home, home_code, h_tbd = _resolve(raw_h)
                     away, away_code, a_tbd = _resolve(raw_a)
 
                     winner = ""
-                    if st == "STATUS_FINAL":
+                    if match_status == "completed":
                         try:
                             winner = home if int(hs) > int(as_) else (
                                 away if int(as_) > int(hs) else "")
@@ -855,18 +890,20 @@ def fetch_bracket():
                         winner = away
 
                     all_matches.append({
-                        "id":         ev.get("id", ""),
-                        "date":       date,
-                        "round":      _infer_round(raw_h, raw_a, date),
-                        "home":       home,
-                        "home_code":  home_code,
-                        "home_score": str(hs),
-                        "away":       away,
-                        "away_code":  away_code,
-                        "away_score": str(as_),
-                        "status":     st,
-                        "winner":     winner,
-                        "is_tbd":     h_tbd or a_tbd,
+                        "id":           ev.get("id", ""),
+                        "date":         date,
+                        "round":        _infer_round(raw_h, raw_a, query_date),
+                        "home":         home,
+                        "home_code":    home_code,
+                        "home_score":   str(hs),
+                        "away":         away,
+                        "away_code":    away_code,
+                        "away_score":   str(as_),
+                        "status":       st,
+                        "match_status": match_status,
+                        "clock":        clock,
+                        "winner":       winner,
+                        "is_tbd":       h_tbd or a_tbd,
                     })
             except Exception:
                 pass
@@ -971,18 +1008,20 @@ def fetch_bracket():
                 for i in range(0, len(unassigned) - 1, 2):
                     home, away = unassigned[i], unassigned[i + 1]
                     by_round["Round of 32"].append({
-                        "id":         f"gen_{i}",
-                        "date":       "TBD",
-                        "round":      "Round of 32",
-                        "home":       home,
-                        "home_code":  COUNTRY_CODES.get(home, "un"),
-                        "home_score": "",
-                        "away":       away,
-                        "away_code":  COUNTRY_CODES.get(away, "un"),
-                        "away_score": "",
-                        "status":     "upcoming",
-                        "winner":     "",
-                        "is_tbd":     True,
+                        "id":           f"gen_{i}",
+                        "date":         "TBD",
+                        "round":        "Round of 32",
+                        "home":         home,
+                        "home_code":    COUNTRY_CODES.get(home, "un"),
+                        "home_score":   "",
+                        "away":         away,
+                        "away_code":    COUNTRY_CODES.get(away, "un"),
+                        "away_score":   "",
+                        "status":       "upcoming",
+                        "match_status": "upcoming",
+                        "clock":        "",
+                        "winner":       "",
+                        "is_tbd":       True,
                     })
                 # If an odd team is left, add vs TBD
                 if len(unassigned) % 2 == 1:
@@ -995,6 +1034,7 @@ def fetch_bracket():
                         "home_code":  COUNTRY_CODES.get(home, "un"),
                         "home_score": "", "away": "TBD", "away_code": "un",
                         "away_score": "", "status": "upcoming",
+                        "match_status": "upcoming", "clock": "",
                         "winner": "", "is_tbd": True,
                     })
         except Exception as ge:

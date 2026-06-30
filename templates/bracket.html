@@ -228,8 +228,8 @@ function flagEl(code, name) {
 }
 
 function matchCard(m, extraClass = '') {
-  const played   = m.status === 'STATUS_FINAL';
-  const live     = m.status === 'STATUS_IN_PROGRESS';
+  const played   = m.match_status === 'completed';
+  const live     = m.match_status === 'live';
   const homeWon  = played && m.winner === m.home;
   const awayWon  = played && m.winner === m.away;
   const hCls     = played ? (homeWon ? 'winner' : 'loser') : '';
@@ -239,7 +239,7 @@ function matchCard(m, extraClass = '') {
   const hScore   = (played||live) ? `<span class="team-score">${m.home_score}</span>` : '';
   const aScore   = (played||live) ? `<span class="team-score away-score">${m.away_score}</span>` : '';
   const footer   = live
-    ? `<div class="match-footer live">● LIVE</div>`
+    ? `<div class="match-footer live">● LIVE${m.clock ? ' · ' + m.clock : ''}</div>`
     : `<div class="match-footer">${m.date}</div>`;
 
   return `
