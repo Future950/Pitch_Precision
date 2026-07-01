@@ -55,6 +55,18 @@ home_goals_model = joblib.load(OUT_DIR / "goals_home_model.pkl")
 away_goals_model = joblib.load(OUT_DIR / "goals_away_model.pkl")
 
 tournament_df = pd.read_csv(OUT_DIR / "tournament_predictions.csv")
+
+# Parse model accuracy from metrics file (updated every time model is retrained)
+_MODEL_ACCURACY = 0.0
+try:
+    for line in (OUT_DIR / "model_metrics.txt").read_text().splitlines():
+        if "accuracy" in line:
+            _MODEL_ACCURACY = float(line.split(":")[1].strip())
+            break
+except Exception:
+    pass
+MODEL_ACCURACY_PCT = round(_MODEL_ACCURACY * 100, 2)   # e.g. 62.36
+
 print("All models and data loaded.")
 
 # ── WC 2026 groups ────────────────────────────────────────────────────────────
@@ -619,7 +631,7 @@ def empty_standings():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", model_accuracy=MODEL_ACCURACY_PCT)
 
 
 @app.route("/match")
