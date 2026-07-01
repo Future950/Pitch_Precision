@@ -90,7 +90,7 @@ print("\n" + "=" * 55)
 print("STEP 4 -- Single match prediction demo")
 print("=" * 55)
 
-REFERENCE_DATE = pd.Timestamp("2026-06-23")
+REFERENCE_DATE = pd.Timestamp("2026-07-01")
 
 def make_matchup_features(home, away, results_df, rankings_df, elo_history, date, neutral=1):
     hf      = get_team_form(results_df, home, date)

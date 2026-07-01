@@ -204,8 +204,8 @@ def get_elo_rating(elo_history: dict, team: str, before_date) -> float:
 # 3. FEATURE ENGINEERING
 # ─────────────────────────────────────────────
 
-def get_team_form(results_df, team, before_date, n=10):
-    """Recency-weighted form score over last n matches (Win=1, Draw=0.5, Loss=0)."""
+def get_team_form(results_df, team, before_date, n=10, decay=0.85):
+    """Exponentially recency-weighted form score over last n matches (Win=1, Draw=0.5, Loss=0)."""
     mask = (
         ((results_df["home_team"] == team) | (results_df["away_team"] == team))
         & (results_df["date"] < before_date)
@@ -225,12 +225,20 @@ def get_team_form(results_df, team, before_date, n=10):
             return 0.0
 
     recent["result"] = recent.apply(score, axis=1)
-    weights = np.linspace(0.5, 1.0, len(recent))
+    n_matches = len(recent)
+    # most recent match -> weight decay^0 = 1.0, oldest -> decay^(n_matches-1)
+    weights = decay ** np.arange(n_matches - 1, -1, -1)
     return float(np.average(recent["result"], weights=weights))
 
 
-def get_goals_avg(results_df, team, before_date, n=10):
-    """Average goals scored and conceded in last n matches."""
+def get_goals_avg(results_df, team, before_date, n=10, cap=4, decay=0.85):
+    """
+    Recency-weighted average goals scored/conceded in last n matches.
+
+    Per-match goal counts are winsorized at `cap` so a single blowout result
+    (e.g. a 7-1 win) doesn't dominate the rolling average, and matches are
+    weighted with exponential decay so recent form counts more than older form.
+    """
     mask = (
         ((results_df["home_team"] == team) | (results_df["away_team"] == team))
         & (results_df["date"] < before_date)
@@ -247,7 +255,14 @@ def get_goals_avg(results_df, team, before_date, n=10):
         else:
             scored.append(row["away_score"])
             conceded.append(row["home_score"])
-    return float(np.mean(scored)), float(np.mean(conceded))
+
+    scored = np.minimum(np.asarray(scored, dtype=float), cap)
+    conceded = np.minimum(np.asarray(conceded, dtype=float), cap)
+
+    n_matches = len(recent)
+    weights = decay ** np.arange(n_matches - 1, -1, -1)
+
+    return float(np.average(scored, weights=weights)), float(np.average(conceded, weights=weights))
 
 
 def get_draw_rate(results_df, team, before_date, n=20):
